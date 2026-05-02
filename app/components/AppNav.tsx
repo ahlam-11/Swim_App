@@ -13,6 +13,7 @@ const navItems = [
   { href: "/generate", label: "Générer",      icon: "⚡" },
   { href: "/library",  label: "Bibliothèque", icon: "📚" },
   { href: "/history",  label: "Progression",  icon: "📈" },
+  { href: "/login",    label: "Mon compte",   icon: "👤" },
 ];
 
 export default function AppNav() {
