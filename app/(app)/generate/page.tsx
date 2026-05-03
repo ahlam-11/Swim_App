@@ -1,268 +1,491 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
-const S = {
-  serif: { fontFamily: "var(--font-dm-serif)" } as const,
-  sans:  { fontFamily: "var(--font-dm-sans)"  } as const,
-  mono:  { fontFamily: "var(--font-space-mono)" } as const,
-};
+type Level = "debutant" | "intermediaire" | "avance";
+type Objective = "endurance" | "technique" | "vitesse" | "recuperation";
+type EquipmentKey = "planche" | "pullbuoy" | "palmes" | "plaquettes" | "elastique" | "tuba";
 
-const STROKES   = ["Crawl", "Dos", "Brasse", "Papillon", "4 nages", "Ciblé"] as const;
-const LEVELS    = ["Débutant", "Interméd.", "Avancé", "Élite"] as const;
-const GOALS     = ["Endurance", "Vitesse", "Technique", "Récupération"] as const;
-
-type Stroke = (typeof STROKES)[number];
-type Level  = (typeof LEVELS)[number];
-type Goal   = (typeof GOALS)[number];
-
-const MOCK_SESSIONS: Record<string, { title: string; subtitle: string; warmup: [string, string, string][]; main: [string, string, string][]; cooldown: string }> = {
-  default: {
-    title: "Endurance Crawl",
-    subtitle: "45 min · ~2 500m",
-    warmup: [
-      ["4 × 50m",  "Nage libre facile, respiration naturelle", "repos 10\""],
-      ["2 × 100m", "Crawl — focus position du corps",          "repos 15\""],
-    ],
-    main: [
-      ["6 × 200m", "Crawl @75% · inspire tous les 3 temps · régulier",  "repos 20\""],
-      ["4 × 50m",  "Sprint · départ bassin · récupération complète",     "repos 30\""],
-      ["2 × 100m", "Pull-buoy · bras seuls · rythme régulier",           "repos 20\""],
-    ],
-    cooldown: "500m nage libre très facile · focus flottaison et allongement",
-  },
-};
-
-function getMockSession(stroke: Stroke, level: Level, goal: Goal, duration: number) {
-  const session = { ...MOCK_SESSIONS.default };
-  const dist = duration < 40 ? "~1 500m" : duration < 55 ? "~2 000m" : "~2 500m";
-  session.subtitle = `${duration} min · ${dist}`;
-  session.title = `${goal === "Récupération" ? "Récupération" : goal === "Vitesse" ? "Vitesse" : goal === "Technique" ? "Technique" : "Endurance"} ${stroke}`;
-  return session;
+interface Phase {
+  name: string;
+  color: string;
+  rows: [string, string, string, string][];
+  note?: string;
 }
 
-function ResultPanel({ stroke, level, goal, duration }: { stroke: Stroke; level: Level; goal: Goal; duration: number }) {
-  const s = getMockSession(stroke, level, goal, duration);
+interface SessionData {
+  title: string;
+  level: Level;
+  nage: string;
+  duration: string;
+  phases: Phase[];
+  totalMeters: number;
+}
 
+const DURATIONS = ["30min", "45min", "1h00", "1h15", "1h30", "2h00"];
+const DURATION_MINS = [30, 45, 60, 75, 90, 120];
+
+const LEVEL_LABELS: Record<Level, string> = {
+  debutant: "Débutant",
+  intermediaire: "Intermédiaire",
+  avance: "Avancé",
+};
+
+const OBJECTIVE_LABELS: Record<Objective, string> = {
+  endurance: "Endurance",
+  technique: "Technique",
+  vitesse: "Vitesse",
+  recuperation: "Récupération",
+};
+
+const OBJECTIVE_DESCS: Record<Objective, string> = {
+  endurance: "Travail aérobie long",
+  technique: "Drills et correction",
+  vitesse: "Séries courtes intenses",
+  recuperation: "Faible intensité",
+};
+
+const EQUIPMENT_ITEMS: { key: EquipmentKey; label: string }[] = [
+  { key: "planche",    label: "Planche" },
+  { key: "pullbuoy",   label: "Pull buoy" },
+  { key: "palmes",     label: "Palmes" },
+  { key: "plaquettes", label: "Plaquettes" },
+  { key: "elastique",  label: "Élastique" },
+  { key: "tuba",       label: "Tuba" },
+];
+
+function buildSession(level: Level, strokes: Set<string>, objective: Objective, durationIdx: number): SessionData {
+  const selected = [...strokes];
+  const nageLabel = selected.length > 0
+    ? selected[0].charAt(0).toUpperCase() + selected[0].slice(1)
+    : "Crawl";
+  const mins = DURATION_MINS[durationIdx];
+  const title = `${OBJECTIVE_LABELS[objective]} ${nageLabel} — ${DURATIONS[durationIdx]}`;
+
+  const sessions: Record<Objective, Phase[]> = {
+    endurance: [
+      { name: "Échauffement",   color: "#90CAF9", rows: [["1×", "300m",              nageLabel + " facile", "—"]],    note: "Démarre doucement, augmente progressivement." },
+      { name: "Principal",      color: "#0055A4", rows: [["4×", `${Math.round(mins * 12)}m`, nageLabel,        "30s"], ["2×", "100m", "Dos", "20s"]], note: "Maintiens un rythme stable tout au long." },
+      { name: "Retour au calme",color: "#BBDEFB", rows: [["1×", "200m",              "4 nages",             "—"]],    note: "Relâche les épaules, respire." },
+    ],
+    technique: [
+      { name: "Échauffement",   color: "#90CAF9", rows: [["1×", "400m",  nageLabel + " facile", "—"]], note: "Focus sur la glisse." },
+      { name: "Drills",         color: "#64B5F6", rows: [["6×", "50m",   "Drill bras",  "15s"], ["4×", "50m", "Kicking board", "15s"]], note: "Exécute chaque drill avec intention." },
+      { name: "Principal",      color: "#0055A4", rows: [["4×", "150m",  nageLabel,     "30s"]], note: "Applique la technique travaillée en drill." },
+      { name: "Retour au calme",color: "#BBDEFB", rows: [["1×", "200m",  "Choix",       "—"]] },
+    ],
+    vitesse: [
+      { name: "Échauffement",   color: "#90CAF9", rows: [["1×", "500m",  nageLabel,            "—"]], note: "Active les épaules progressivement." },
+      { name: "Principal",      color: "#0055A4", rows: [["10×","50m",   nageLabel + " sprint", "45s"], ["4×", "100m", nageLabel, "1min"]], note: "Chaque 50m à fond — récupération complète." },
+      { name: "Retour au calme",color: "#BBDEFB", rows: [["1×", "300m",  "Facile",             "—"]] },
+    ],
+    recuperation: [
+      { name: "Warm-up",        color: "#90CAF9", rows: [["1×", "200m",  "Dos facile",         "—"]] },
+      { name: "Principal",      color: "#0055A4", rows: [["4×", "200m",  "4 Nages — très facile","30s"]], note: "Jamais au-dessus de 60% de ta fréquence max." },
+      { name: "Retour au calme",color: "#BBDEFB", rows: [["1×", "100m",  "Brasse",             "—"]], note: "Étirements recommandés en sortie." },
+    ],
+  };
+
+  const phases = sessions[objective];
+  let totalMeters = 0;
+  phases.forEach(p => p.rows.forEach(r => {
+    const reps = parseInt(r[0]);
+    const meters = parseInt(r[1]);
+    if (!isNaN(reps) && !isNaN(meters)) totalMeters += reps * meters;
+  }));
+
+  return { title, level, nage: nageLabel, duration: DURATIONS[durationIdx], phases, totalMeters };
+}
+
+function useCountUp(target: number, active: boolean) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!active || target === 0) { setValue(0); return; }
+    const duration = 600;
+    const startTime = performance.now();
+    function tick(now: number) {
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      setValue(Math.round(ease * target));
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [target, active]);
+  return value;
+}
+
+function ConfigLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="arr" style={{ background: "var(--surface)", border: "1px solid var(--rule-light)", boxShadow: "0 16px 48px rgba(0,0,0,0.07)", overflow: "hidden" }}>
-      {/* Header */}
-      <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--rule-light)" }}>
-        <div className="mono-label mono-label-blue" style={{ marginBottom: 8 }}>
-          {stroke} · {level} · {goal}
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ ...S.serif, fontSize: 22, lineHeight: 1.1, color: "var(--ink)" }}>{s.title}</div>
-            <div style={{ ...S.sans, fontSize: 12, color: "var(--ink-faint)", marginTop: 6, fontWeight: 300 }}>{s.subtitle} · généré maintenant</div>
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--ink-faint)", lineHeight: 1 }}>♡</button>
-            <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "var(--ink-faint)", lineHeight: 1 }}>⊙</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Blocks */}
-      <div style={{ padding: "16px 24px", overflowY: "auto", maxHeight: "calc(100vh - 360px)", display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Warmup */}
-        <div>
-          <div className="mono-label" style={{ marginBottom: 10 }}>Échauffement</div>
-          {s.warmup.map(([sets, desc, rest]) => (
-            <div key={sets + desc} style={{ display: "flex", gap: 12, padding: "8px 0", borderBottom: "1px solid var(--rule-light)" }}>
-              <span style={{ ...S.mono, fontSize: 10, color: "var(--ink)", minWidth: 54, lineHeight: 1.5 }}>{sets}</span>
-              <div>
-                <div style={{ ...S.sans, fontSize: 13, lineHeight: 1.4 }}>{desc}</div>
-                <div style={{ ...S.mono, fontSize: 9, color: "var(--ink-faint)", marginTop: 2 }}>{rest}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Main */}
-        <div>
-          <div className="mono-label mono-label-blue" style={{ marginBottom: 10 }}>Corps de séance</div>
-          {s.main.map(([sets, desc, rest]) => (
-            <div key={sets + desc} style={{ display: "flex", gap: 12, padding: "8px 12px", background: "var(--blue-pale)", marginBottom: 6 }}>
-              <span style={{ ...S.mono, fontSize: 10, color: "var(--blue)", minWidth: 54, lineHeight: 1.5 }}>{sets}</span>
-              <div>
-                <div style={{ ...S.sans, fontSize: 13, lineHeight: 1.4 }}>{desc}</div>
-                <div style={{ ...S.mono, fontSize: 9, color: "var(--blue-mid)", marginTop: 2 }}>{rest}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Cool down */}
-        <div>
-          <div className="mono-label" style={{ marginBottom: 8 }}>Retour au calme</div>
-          <div style={{ ...S.sans, fontSize: 13, color: "var(--ink-soft)", fontWeight: 300, lineHeight: 1.5 }}>{s.cooldown}</div>
-        </div>
-      </div>
-
-      {/* Export */}
-      <div style={{ padding: "14px 24px", borderTop: "1px solid var(--rule-light)", background: "var(--ink)", display: "flex", gap: 8 }}>
-        <div className="mono-label" style={{ color: "rgba(255,255,255,0.3)", alignSelf: "center", marginRight: 4 }}>Export</div>
-        {[
-          { l: "Garmin", s: { background: "var(--blue)", color: "#fff", border: "none" } },
-          { l: "COROS",  s: { background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" } },
-          { l: "PDF",    s: { background: "transparent", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.12)" } },
-        ].map(({ l, s: bs }) => (
-          <button key={l} className="btn-blue" style={{ flex: 1, fontSize: 12, padding: "9px", ...bs, transition: "opacity 0.15s" }}>
-            {l}
-          </button>
-        ))}
-      </div>
-    </div>
+    <span style={{ display: "block", fontFamily: "var(--font-dm-sans)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--gris-doux)", marginBottom: 16 }}>
+      {children}
+    </span>
   );
 }
 
 export default function GeneratePage() {
-  const [stroke,   setStroke]   = useState<Stroke>("Crawl");
-  const [level,    setLevel]    = useState<Level>("Interméd.");
-  const [goal,     setGoal]     = useState<Goal>("Endurance");
-  const [duration, setDuration] = useState(45);
-  const [result,   setResult]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
+  const [level,        setLevel]        = useState<Level>("debutant");
+  const [strokes,      setStrokes]      = useState<Set<string>>(new Set(["crawl"]));
+  const [objective,    setObjective]    = useState<Objective>("endurance");
+  const [durationIdx,  setDurationIdx]  = useState(2);
+  const [equipment,    setEquipment]    = useState<Set<EquipmentKey>>(new Set(["planche", "pullbuoy"]));
+  const [accordionOpen,setAccordionOpen]= useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [session,      setSession]      = useState<SessionData | null>(null);
+  const [visible,      setVisible]      = useState(false);
+
+  const countUpValue = useCountUp(session?.totalMeters ?? 0, visible);
+
+  function toggleStroke(s: string) {
+    setStrokes(prev => {
+      const next = new Set(prev);
+      if (next.has(s) && next.size > 1) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  }
+
+  function toggleEquipment(k: EquipmentKey) {
+    setEquipment(prev => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
+  }
 
   function handleGenerate() {
     setLoading(true);
-    setResult(false);
-    setTimeout(() => { setLoading(false); setResult(true); }, 900);
+    setSession(null);
+    setVisible(false);
+    setTimeout(() => {
+      const data = buildSession(level, strokes, objective, durationIdx);
+      setSession(data);
+      setLoading(false);
+      setTimeout(() => setVisible(true), 50);
+    }, 1200);
   }
 
+  const sliderPct = (durationIdx / 5) * 100;
+
+  const badgeStyle = (gray = false): React.CSSProperties => ({
+    display: "inline-flex", alignItems: "center",
+    padding: "4px 12px", borderRadius: 999,
+    fontFamily: "var(--font-dm-sans)", fontSize: 12, fontWeight: 500,
+    background: gray ? "#F3F4F6" : "var(--bleu-clair)",
+    color: gray ? "var(--gris-doux)" : "var(--bleu-piscine)",
+  });
+
+  const actionBtnStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 6,
+    fontFamily: "var(--font-dm-sans)", fontSize: 13, color: "var(--gris-doux)",
+    background: "none", border: "none", cursor: "pointer", padding: 0,
+  };
+
   return (
-    <div style={{ padding: "36px 32px", maxWidth: 1100, margin: "0 auto" }}>
-      {/* Page header */}
-      <div className="au" style={{ marginBottom: 40 }}>
-        <div className="mono-label" style={{ marginBottom: 8 }}>Générateur</div>
-        <h1 style={{ ...S.serif, fontSize: "clamp(28px, 4vw, 42px)", color: "var(--ink)", lineHeight: 1.05 }}>
-          Configurer ma séance
+    <div style={{ background: "var(--blanc)", minHeight: "100vh" }}>
+
+      {/* PAGE HEADER */}
+      <div style={{ padding: "60px clamp(20px,5vw,80px) 0" }}>
+        <span style={{ display: "block", fontFamily: "var(--font-dm-sans)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--gris-doux)", marginBottom: 12 }}>
+          Générateur
+        </span>
+        <h1 style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 900, fontSize: "clamp(36px,5vw,52px)", color: "var(--encre)", letterSpacing: "-0.02em", lineHeight: 1.05, marginBottom: 12 }}>
+          Configure ta séance
         </h1>
-        <p style={{ ...S.sans, fontSize: 15, color: "var(--ink-soft)", marginTop: 8, fontWeight: 300 }}>
-          Quelques choix, une séance adaptée.
+        <p style={{ fontSize: 18, color: "var(--gris-doux)", lineHeight: 1.6, marginBottom: 40 }}>
+          Adapte chaque paramètre à ce que tu veux travailler.
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: result ? "1fr 1fr" : "560px 1fr", gap: 32, alignItems: "start" }}>
-        {/* ── Left: Form ── */}
-        <div className="au d1" style={{ background: "var(--surface)", border: "1px solid var(--rule-light)", padding: "28px" }}>
+      {/* TABS */}
+      <div className="page-tabs">
+        <Link href="/generate" className="page-tab active">Générer</Link>
+        <Link href="/history"  className="page-tab">Séances prêtes</Link>
+      </div>
 
-          {/* Stroke */}
-          <div style={{ marginBottom: 28 }}>
-            <div className="mono-label" style={{ marginBottom: 14 }}>Nage</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {STROKES.map((s) => (
-                <button key={s} className={`chip ${stroke === s ? "chip-active" : ""}`} onClick={() => setStroke(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* MAIN GRID */}
+      <div
+        className="generator-grid"
+        style={{ display: "grid", gridTemplateColumns: "44fr 56fr", gap: "clamp(40px,6vw,80px)", padding: "60px clamp(20px,5vw,80px)", alignItems: "start" }}
+      >
 
-          {/* Level */}
-          <div style={{ marginBottom: 28 }}>
-            <div className="mono-label" style={{ marginBottom: 14 }}>Niveau</div>
-            <div className="segment">
-              {LEVELS.map((l) => (
-                <button key={l} className={`segment-item ${level === l ? "segment-active" : ""}`} onClick={() => setLevel(l)}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* ── LEFT — CONFIG ── */}
+        <div>
 
-          {/* Goal */}
-          <div style={{ marginBottom: 28 }}>
-            <div className="mono-label" style={{ marginBottom: 14 }}>Objectif</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {GOALS.map((g) => (
+          {/* NIVEAU */}
+          <div style={{ paddingBottom: 28, borderBottom: "1px solid var(--ligne)" }}>
+            <ConfigLabel>Niveau</ConfigLabel>
+            <div style={{ display: "flex", gap: 24 }}>
+              {(["debutant", "intermediaire", "avance"] as Level[]).map(l => (
                 <button
-                  key={g}
-                  onClick={() => setGoal(g)}
+                  key={l}
+                  onClick={() => setLevel(l)}
                   style={{
-                    padding: "11px 14px",
-                    ...S.sans,
-                    fontSize: 14,
-                    textAlign: "left",
-                    cursor: "pointer",
-                    border: `1px solid ${goal === g ? "var(--ink)" : "var(--rule-light)"}`,
-                    background: goal === g ? "var(--ink)" : "transparent",
-                    color: goal === g ? "#fff" : "var(--ink)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    transition: "all 0.15s ease",
+                    fontFamily: "var(--font-dm-sans)", fontWeight: 500, fontSize: 16,
+                    color: level === l ? "var(--bleu-piscine)" : "var(--gris-doux)",
+                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                    textDecoration: level === l ? "underline" : "none",
+                    textDecorationColor: "var(--bleu-piscine)",
+                    textUnderlineOffset: "3px",
                   }}
                 >
-                  {g}
-                  {goal === g && <span style={{ fontSize: 10 }}>✓</span>}
+                  {LEVEL_LABELS[l]}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Duration */}
-          <div style={{ marginBottom: 32 }}>
-            <div className="mono-label" style={{ marginBottom: 14 }}>
-              Durée —{" "}
-              <span style={{ color: "var(--ink)", fontFamily: "var(--font-space-mono)" }}>
-                {duration} min
-              </span>
-            </div>
-            <input
-              type="range"
-              min={20}
-              max={120}
-              step={5}
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-              <span style={{ ...S.mono, fontSize: 9, color: "var(--ink-faint)" }}>20 min</span>
-              <span style={{ ...S.mono, fontSize: 9, color: "var(--ink-faint)" }}>2 h</span>
+          {/* NAGES */}
+          <div style={{ padding: "28px 0", borderBottom: "1px solid var(--ligne)" }}>
+            <ConfigLabel>Nage à travailler</ConfigLabel>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {[["crawl","Crawl"],["dos","Dos"],["brasse","Brasse"],["papillon","Papillon"],["4nages","4 Nages"]].map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => toggleStroke(key)}
+                  className={`swim-chip${strokes.has(key) ? " selected" : ""}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Generate button */}
+          {/* OBJECTIF */}
+          <div style={{ padding: "28px 0", borderBottom: "1px solid var(--ligne)" }}>
+            <ConfigLabel>Objectif</ConfigLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {(["endurance", "technique", "vitesse", "recuperation"] as Objective[]).map(obj => {
+                const checked = objective === obj;
+                return (
+                  <div key={obj} onClick={() => setObjective(obj)} style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+                    <div style={{ width: 16, height: 16, minWidth: 16, borderRadius: "50%", border: `1.5px solid ${checked ? "var(--bleu-piscine)" : "var(--ligne)"}`, background: checked ? "var(--bleu-piscine)" : "var(--blanc)", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 150ms, background 150ms" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white", opacity: checked ? 1 : 0, transition: "opacity 150ms" }} />
+                    </div>
+                    <span style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 500, fontSize: 16, color: "var(--encre)", flex: 1 }}>{OBJECTIVE_LABELS[obj]}</span>
+                    <span style={{ fontSize: 14, color: "var(--gris-doux)" }}>{OBJECTIVE_DESCS[obj]}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* DURÉE */}
+          <div style={{ padding: "28px 0", borderBottom: "1px solid var(--ligne)" }}>
+            <ConfigLabel>Durée</ConfigLabel>
+            <div style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 32, color: "var(--encre)", marginBottom: 16, letterSpacing: "-0.01em" }}>
+              {DURATIONS[durationIdx]}
+            </div>
+            <input
+              type="range" min={0} max={5} step={1} value={durationIdx}
+              onChange={e => setDurationIdx(Number(e.target.value))}
+              style={{ background: `linear-gradient(to right, var(--bleu-piscine) ${sliderPct}%, var(--ligne) ${sliderPct}%)` }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+              {["30'","45'","1h","1h15","1h30","2h"].map(t => (
+                <span key={t} style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "var(--font-dm-sans)" }}>{t}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* ÉQUIPEMENT */}
+          <div style={{ padding: "28px 0", borderBottom: "1px solid var(--ligne)" }}>
+            <ConfigLabel>Équipement disponible</ConfigLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px 20px" }}>
+              {EQUIPMENT_ITEMS.map(({ key, label }) => {
+                const checked = equipment.has(key);
+                return (
+                  <div key={key} onClick={() => toggleEquipment(key)} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <div style={{ width: 16, height: 16, minWidth: 16, border: `1.5px solid ${checked ? "var(--bleu-piscine)" : "var(--ligne)"}`, borderRadius: 3, background: checked ? "var(--bleu-piscine)" : "var(--blanc)", display: "flex", alignItems: "center", justifyContent: "center", transition: "border-color 150ms, background 150ms" }}>
+                      {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <span style={{ fontSize: 14, color: "var(--encre)", fontFamily: "var(--font-dm-sans)" }}>{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* OPTIONS AVANCÉES */}
+          <div>
+            <button
+              onClick={() => setAccordionOpen(o => !o)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", width: "100%", padding: "28px 0", background: "none", border: "none", textAlign: "left" }}
+            >
+              <span style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 500, fontSize: 15, color: "var(--encre)" }}>Options avancées</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition: "transform 250ms ease", transform: accordionOpen ? "rotate(180deg)" : "none", flexShrink: 0 }}>
+                <path d="M4 6L8 10L12 6" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div style={{ overflow: "hidden", maxHeight: accordionOpen ? 400 : 0, opacity: accordionOpen ? 1 : 0, transition: "max-height 300ms ease, opacity 300ms ease" }}>
+              <div style={{ paddingBottom: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                  <ConfigLabel>Focus technique</ConfigLabel>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {["Bras","Jambes","Respiration","Virage"].map(f => (
+                      <button key={f} className="swim-chip">{f}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <ConfigLabel>Intensité</ConfigLabel>
+                  <div style={{ display: "flex", gap: 20 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 500, fontSize: 16, color: n === 3 ? "var(--bleu-piscine)" : "var(--gris-doux)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: n === 3 ? "underline" : "none", textUnderlineOffset: "3px" }}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+                {[["Échauffement", true], ["Retour au calme", true]].map(([label, on]) => (
+                  <div key={label as string} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontFamily: "var(--font-dm-sans)", fontSize: 15, color: "var(--encre)" }}>{label}</span>
+                    <div style={{ width: 40, height: 22, borderRadius: 999, background: on ? "var(--bleu-piscine)" : "var(--ligne)", position: "relative", cursor: "pointer", transition: "background 200ms" }}>
+                      <div style={{ position: "absolute", top: 3, width: 16, height: 16, borderRadius: "50%", background: "white", transition: "left 200ms ease", left: on ? 21 : 3 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* GENERATE BUTTON */}
           <button
-            className="btn-ink"
-            style={{ width: "100%", justifyContent: "center", fontSize: 16, padding: "15px", ...S.serif, letterSpacing: 0 }}
             onClick={handleGenerate}
             disabled={loading}
+            style={{ width: "100%", height: 52, fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 20, background: "var(--bleu-piscine)", color: "var(--blanc)", border: "none", borderRadius: 999, cursor: loading ? "not-allowed" : "pointer", transition: "background 200ms ease", marginTop: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: loading ? 0.8 : 1 }}
           >
             {loading ? (
-              <span style={{ ...S.mono, fontSize: 11, letterSpacing: "0.1em", opacity: 0.7 }}>GÉNÉRATION…</span>
-            ) : (
-              <>Générer ma séance →</>
-            )}
+              <>
+                <span>Génération en cours</span>
+                <span style={{ display: "inline-flex", gap: 3 }}>
+                  {[0,1,2].map(i => <span key={i} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.6)", animation: "dotPulse 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />)}
+                </span>
+              </>
+            ) : session ? "Régénérer" : "Générer ma séance"}
           </button>
         </div>
 
-        {/* ── Right: Result ── */}
-        {result ? (
-          <ResultPanel stroke={stroke} level={level} goal={goal} duration={duration} />
-        ) : (
-          <div className="au d2" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 32px", border: "1px dashed var(--rule)", color: "var(--ink-faint)", gap: 16, minHeight: 240 }}>
-            {loading ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 32, height: 32, border: "2px solid var(--rule-light)", borderTop: "2px solid var(--blue)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                <span style={{ ...S.mono, fontSize: 10, letterSpacing: "0.12em", color: "var(--blue)" }}>GÉNÉRATION EN COURS…</span>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        {/* ── RIGHT — RESULT ── */}
+        <div style={{ position: "sticky", top: 80 }}>
+
+          {!session && !loading && (
+            <div style={{ position: "relative", minHeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {/* Ghost preview */}
+              <div style={{ position: "absolute", inset: 0, opacity: 0.12, pointerEvents: "none", padding: 32 }}>
+                <div style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontSize: 24, color: "var(--encre)", marginBottom: 16 }}>Endurance Crawl — 1h</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+                  <span style={badgeStyle()}>Débutant</span>
+                  <span style={badgeStyle()}>Crawl</span>
+                </div>
+                <div style={{ borderTop: "1px solid var(--ligne)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+                  {[{color:"#90CAF9",label:"Échauffement",content:"1×300m Crawl facile"},{color:"#0055A4",label:"Principal",content:"4×200m Crawl — 30s repos"}].map(({ color, label, content }) => (
+                    <div key={label} style={{ display: "flex", gap: 12 }}>
+                      <div style={{ width: 3, background: color, borderRadius: 2 }} />
+                      <div>
+                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "#9CA3AF", marginBottom: 8 }}>{label}</div>
+                        <div style={{ fontSize: 14, color: "var(--encre)" }}>{content}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <>
-                <div style={{ fontSize: 32, opacity: 0.3 }}>◈</div>
-                <div style={{ ...S.serif, fontSize: 18, color: "var(--ink-soft)", textAlign: "center" }}>
-                  Ta séance<br />apparaîtra ici
+              <p style={{ position: "relative", zIndex: 2, fontFamily: "var(--font-dm-sans)", fontStyle: "italic", fontSize: 18, color: "var(--gris-doux)", textAlign: "center" }}>
+                Ta séance générée apparaît ici.
+              </p>
+            </div>
+          )}
+
+          {loading && (
+            <div style={{ minHeight: 500, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", border: "2px solid var(--ligne)", borderTopColor: "var(--bleu-piscine)", animation: "spin 0.8s linear infinite" }} />
+              <p style={{ fontFamily: "var(--font-dm-sans)", fontStyle: "italic", fontSize: 16, color: "var(--gris-doux)" }}>Génération en cours…</p>
+            </div>
+          )}
+
+          {session && !loading && (
+            <div>
+              {/* Header */}
+              <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--ligne)" }}>
+                <h2 style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 32, color: "var(--encre)", marginBottom: 12, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
+                  {session.title}
+                </h2>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                  <span style={badgeStyle()}>{LEVEL_LABELS[session.level]}</span>
+                  <span style={badgeStyle()}>{session.nage}</span>
+                  <span style={badgeStyle(true)}>{session.duration}</span>
                 </div>
-                <div style={{ ...S.sans, fontSize: 13, color: "var(--ink-faint)", textAlign: "center", fontWeight: 300 }}>
-                  Configure et clique sur<br />« Générer ma séance »
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
+                  <button style={actionBtnStyle}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Sauvegarder
+                  </button>
+                  <div style={{ width: 1, height: 14, background: "var(--ligne)" }} />
+                  <button style={actionBtnStyle}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Exporter
+                  </button>
+                  <div style={{ width: 1, height: 14, background: "var(--ligne)" }} />
+                  <button onClick={handleGenerate} style={actionBtnStyle}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 015-5 5 5 0 013.54 1.46L12 5M12 7a5 5 0 01-5 5 5 5 0 01-3.54-1.46L2 9" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/><path d="M12 2v3H9M2 12v-3h3" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Régénérer
+                  </button>
                 </div>
-              </>
-            )}
-          </div>
-        )}
+              </div>
+
+              {/* Phases */}
+              {session.phases.map((phase, i) => (
+                <div
+                  key={phase.name}
+                  style={{ padding: "20px 0", borderBottom: "1px solid var(--ligne)", display: "flex", gap: 16, opacity: visible ? 1 : 0, transform: visible ? "none" : "translateY(8px)", transition: `opacity 300ms ease ${i * 60}ms, transform 300ms ease ${i * 60}ms` }}
+                >
+                  <div style={{ width: 3, borderRadius: 2, background: phase.color, flexShrink: 0, minHeight: 60 }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ display: "block", fontFamily: "var(--font-dm-sans)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--gris-doux)", marginBottom: 12 }}>
+                      {phase.name}
+                    </span>
+                    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+                      <thead>
+                        <tr>
+                          {["Rép.","Distance","Nage","Repos"].map(h => (
+                            <th key={h} style={{ fontFamily: "var(--font-dm-sans)", fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#9CA3AF", textAlign: "left", padding: "0 0 8px", borderBottom: "1px solid var(--ligne)", fontWeight: 400 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phase.rows.map((row, j) => (
+                          <tr key={j}>
+                            {row.map((cell, k) => (
+                              <td key={k} style={{ fontFamily: "var(--font-dm-sans)", fontSize: k === 0 ? 13 : 15, color: k === 0 ? "var(--gris-doux)" : "var(--encre)", padding: "10px 0", borderBottom: j < phase.rows.length - 1 ? "1px solid var(--ligne)" : "none" }}>
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {phase.note && (
+                      <p style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", fontSize: 14, color: "var(--gris-doux)", lineHeight: 1.5, marginTop: 8 }}>
+                        {phase.note}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Footer */}
+              <div style={{ paddingTop: 24, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 40, color: "var(--encre)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+                    {countUpValue.toLocaleString("fr-FR")} m
+                  </div>
+                  <div style={{ fontSize: 14, color: "var(--gris-doux)", marginTop: 4 }}>Distance totale estimée</div>
+                </div>
+                <button className="swim-btn-primary" style={{ whiteSpace: "nowrap" }}>
+                  Exporter vers ma montre
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,22 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display, DM_Sans, Space_Mono } from "next/font/google";
+import { Fraunces, Instrument_Serif, DM_Serif_Display, DM_Sans, Space_Mono } from "next/font/google";
 import "./globals.css";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  weight: ["400", "700", "900"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
 
 const dmSerif = DM_Serif_Display({
   weight: "400",
@@ -24,7 +40,7 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SwimGen — Séances de natation sur-mesure",
+  title: "swim — Nage avec intention",
   description:
     "Génère tes entraînements de natation et exporte directement sur ta montre Garmin ou COROS.",
 };
@@ -35,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${dmSerif.variable} ${dmSans.variable} ${spaceMono.variable} h-full`}
+      className={`${fraunces.variable} ${instrumentSerif.variable} ${dmSerif.variable} ${dmSans.variable} ${spaceMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

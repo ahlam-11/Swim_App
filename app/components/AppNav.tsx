@@ -2,117 +2,159 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const S = {
-  serif: { fontFamily: "var(--font-dm-serif)" } as const,
-  sans:  { fontFamily: "var(--font-dm-sans)"  } as const,
-  mono:  { fontFamily: "var(--font-space-mono)" } as const,
-};
-
-const navItems = [
-  { href: "/generate", label: "Générer",      icon: "⚡" },
-  { href: "/library",  label: "Bibliothèque", icon: "📚" },
-  { href: "/history",  label: "Progression",  icon: "📈" },
-  { href: "/login",    label: "Mon compte",   icon: "👤" },
+const NAV_ITEMS = [
+  { href: "/generate", label: "Générer" },
+  { href: "/history",  label: "Séances" },
+  { href: "/library",  label: "Apprendre" },
 ];
 
 export default function AppNav() {
   const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 10);
+    fn();
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
-      <aside
-        className="hidden lg:flex"
+      {/* ── Fixed top nav ── */}
+      <nav
         style={{
-          width: 230,
-          flexShrink: 0,
-          borderRight: "1px solid var(--rule-light)",
+          position: "fixed",
+          top: 0, left: 0, right: 0,
+          zIndex: 100,
+          height: 64,
+          background: "rgba(255,255,255,0.96)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: `1px solid ${scrolled ? "var(--ligne)" : "transparent"}`,
           display: "flex",
-          flexDirection: "column",
-          padding: "32px 0",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          background: "var(--surface)",
-          overflowY: "auto",
+          alignItems: "center",
+          padding: "0 clamp(20px, 5vw, 80px)",
+          transition: "border-color 200ms ease",
         }}
       >
-        {/* Logo */}
-        <div style={{ padding: "0 24px", marginBottom: 44 }}>
-          <Link href="/" style={{ ...S.serif, fontSize: 22, color: "var(--ink)", textDecoration: "none", letterSpacing: "-0.01em" }}>
-            swim<span style={{ color: "var(--blue)" }}>gen</span>
-          </Link>
-          <div style={{ width: 24, height: 3, background: "var(--blue)", marginTop: 8, borderRadius: 2 }} />
-        </div>
+        <Link
+          href="/"
+          style={{
+            fontFamily: "var(--font-fraunces)",
+            fontStyle: "italic",
+            fontWeight: 700,
+            fontSize: 22,
+            color: "var(--encre)",
+            textDecoration: "none",
+            letterSpacing: "-0.02em",
+            marginRight: 40,
+            flexShrink: 0,
+          }}
+        >
+          swim
+        </Link>
 
-        {/* Nav */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {navItems.map(({ href, label, icon }) => {
+        {/* Desktop nav links */}
+        <ul
+          className="hidden lg:flex"
+          style={{ listStyle: "none", margin: 0, padding: 0, flex: 1, gap: 32 }}
+        >
+          {NAV_ITEMS.map(({ href, label }) => {
             const active = pathname === href;
             return (
-              <Link
-                key={href}
-                href={href}
-                style={{
-                  padding: "11px 24px",
-                  ...S.sans,
-                  fontSize: 14,
-                  letterSpacing: "0.01em",
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  transition: "background 0.12s, color 0.12s",
-                  background: active ? "var(--blue)" : "transparent",
-                  color: active ? "#fff" : "var(--ink-soft)",
-                  borderRadius: active ? "0 100px 100px 0" : 0,
-                  marginRight: 16,
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{icon}</span>
-                {label}
-              </Link>
+              <li key={href}>
+                <Link
+                  href={href}
+                  style={{
+                    fontFamily: "var(--font-dm-sans)",
+                    fontSize: 15,
+                    color: active ? "var(--encre)" : "var(--gris-doux)",
+                    textDecoration: active ? "underline" : "none",
+                    textDecorationColor: "var(--bleu-piscine)",
+                    textUnderlineOffset: "4px",
+                    transition: "color 150ms",
+                  }}
+                >
+                  {label}
+                </Link>
+              </li>
             );
           })}
-        </nav>
+        </ul>
 
-        <div style={{ flex: 1 }} />
+        <div className="flex-1 lg:hidden" />
 
-        {/* Back to home */}
-        <div style={{ padding: "0 24px" }}>
-          <Link href="/" style={{ ...S.sans, fontSize: 12, color: "var(--ink-faint)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            ← Accueil
-          </Link>
-        </div>
-      </aside>
+        <Link
+          href="/login"
+          style={{
+            fontFamily: "var(--font-dm-sans)",
+            fontSize: 14,
+            fontWeight: 500,
+            color: "var(--encre)",
+            textDecoration: "none",
+            border: "1.5px solid var(--encre)",
+            borderRadius: 999,
+            padding: "7px 18px",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          Connexion
+        </Link>
+      </nav>
 
       {/* ── Mobile bottom tab bar ── */}
       <div
-        className="lg:hidden"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{
-          position: "fixed",
-          bottom: 0, left: 0, right: 0,
-          zIndex: 50,
-          borderTop: "1px solid var(--rule-light)",
+          borderTop: "1px solid var(--ligne)",
           background: "rgba(255,255,255,0.96)",
           backdropFilter: "blur(12px)",
-          padding: "8px 0 16px",
           display: "flex",
+          padding: "8px 0 16px",
         }}
       >
-        {[{ href: "/", label: "Accueil", icon: "🏠" }, ...navItems].map(({ href, label, icon }) => {
+        {NAV_ITEMS.map(({ href, label }) => {
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textDecoration: "none" }}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                textDecoration: "none",
+                paddingTop: 4,
+              }}
             >
-              <div style={{ width: 28, height: 3, background: active ? "var(--blue)" : "transparent", borderRadius: 2, marginBottom: 2, transition: "background 0.15s" }} />
-              <span style={{ fontSize: 18 }}>{icon}</span>
-              <span style={{ ...S.mono, fontSize: 7.5, letterSpacing: "0.06em", color: active ? "var(--blue)" : "var(--ink-faint)", transition: "color 0.15s" }}>
-                {label.toUpperCase()}
+              <div
+                style={{
+                  width: 28,
+                  height: 3,
+                  background: active ? "var(--bleu-piscine)" : "transparent",
+                  borderRadius: 2,
+                  marginBottom: 2,
+                  transition: "background 0.15s",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 9,
+                  letterSpacing: "0.06em",
+                  fontFamily: "var(--font-dm-sans)",
+                  fontWeight: 500,
+                  color: active ? "var(--bleu-piscine)" : "var(--gris-doux)",
+                  transition: "color 0.15s",
+                  textTransform: "uppercase",
+                }}
+              >
+                {label}
               </span>
             </Link>
           );

@@ -1,259 +1,247 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
-const S = {
-  serif: { fontFamily: "var(--font-dm-serif)" } as const,
-  sans:  { fontFamily: "var(--font-dm-sans)"  } as const,
-  mono:  { fontFamily: "var(--font-space-mono)" } as const,
+const F = "var(--font-fraunces), Georgia, serif";
+const S = "var(--font-dm-sans), system-ui, sans-serif";
+
+const IMG = {
+  hero:     "/swimmer_landing.webp",
+  pool:     "https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=900&q=80",
+  swimmer:  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=700&q=80",
+  nature:   "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=700&q=80",
+  cta:      "https://images.unsplash.com/photo-1560090995-01632a28895b?w=1800&q=80",
 };
 
-const P = {
-  hero:    "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=1600&auto=format&q=85",
-  pool:    "https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=900&auto=format&q=80",
-  swimmer: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&auto=format&q=80",
-  watch:   "https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?w=900&auto=format&q=80",
-  water:   "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1400&auto=format&q=80",
-};
-
-function Wave({ flip = false, fromColor, toColor }: { flip?: boolean; fromColor: string; toColor: string }) {
-  return (
-    <div style={{ lineHeight: 0, background: fromColor }}>
-      <svg viewBox="0 0 1440 64" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 64 }}>
-        <path
-          d={flip
-            ? "M0,32 C360,0 1080,64 1440,32 L1440,0 L0,0 Z"
-            : "M0,32 C360,64 1080,0 1440,32 L1440,64 L0,64 Z"}
-          fill={toColor}
-        />
-      </svg>
-    </div>
-  );
-}
+const SEANCES = [
+  { title: "Endurance Fondamentale", level: "Débutant",     nage: "Crawl",    duration: "1h00",  preview: "Échauff. 300m · Principal 800m · RC 200m",                    featured: false },
+  { title: "Technique Crawl",         level: "Intermédiaire", nage: "Crawl",  duration: "1h15",  preview: "Échauff. 400m · Drills 600m · Principal 600m · RC 200m",     featured: false },
+  { title: "Récupération Active",     level: "Tous niveaux", nage: "4 Nages", duration: "45min", preview: "Échauff. 200m · Mixte 800m · RC 200m",                        featured: false },
+  { title: "Vitesse & Relances",      level: "Avancé",       nage: "Crawl",   duration: "1h30",  preview: "Échauff. 500m · Séries 1200m · RC 300m",                     featured: true  },
+];
 
 export default function LandingPage() {
-  return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+  const [scrolled, setScrolled] = useState(false);
 
-      {/* ── Navigation ── */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 50,
-        background: "rgba(255,255,255,0.94)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid var(--rule-light)",
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ ...S.serif, fontSize: 22, letterSpacing: "-0.01em", color: "var(--ink)" }}>
-            swim<span style={{ color: "var(--blue)" }}>gen</span>
-          </span>
-          <nav style={{ display: "flex", gap: 32 }}>
-            {[["Générer", "/generate"], ["Bibliothèque", "/library"], ["Progression", "/history"]].map(([l, h]) => (
-              <Link key={h} href={h} style={{ ...S.sans, fontSize: 14, color: "var(--ink-soft)", textDecoration: "none" }}>
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const els = document.querySelectorAll(".reveal, .reveal-left, .reveal-right");
+    const obs = new IntersectionObserver(
+      (entries) => entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); }
+      }),
+      { threshold: 0.12 }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div style={{ background: "#fff", color: "#111", fontFamily: S }}>
+
+      {/* ── NAV ── */}
+      <nav
+        className="swim-nav"
+        style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+          background: "#fff", height: 64,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          borderBottom: scrolled ? "1px solid #E5E5E5" : "1px solid transparent",
+          transition: "border-bottom 200ms ease",
+        }}
+      >
+        <Link href="/" style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: 22, color: "#111", textDecoration: "none", letterSpacing: "-0.02em" }}>
+          swim
+        </Link>
+
+        <ul className="hidden md:flex" style={{ gap: 36, listStyle: "none", alignItems: "center", margin: 0, padding: 0 }}>
+          {([["Générer", "/generate"], ["Séances", "/history"], ["Apprendre", "/library"]] as [string, string][]).map(([l, h]) => (
+            <li key={h}>
+              <Link href={h} className="swim-nav-link" style={{ fontFamily: S, fontWeight: 400, fontSize: 15, color: "#111", textDecoration: "none" }}>
                 {l}
               </Link>
-            ))}
-          </nav>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <Link href="/login" style={{ ...S.sans, fontSize: 14, color: "var(--ink-soft)", textDecoration: "none", padding: "8px 18px", border: "1px solid var(--rule)", borderRadius: 100 }}>
-              Se connecter
-            </Link>
-            <Link href="/generate" className="btn-pill btn-blue-pill" style={{ fontSize: 14, padding: "10px 22px" }}>
-              Commencer →
-            </Link>
-          </div>
-        </div>
-      </header>
+            </li>
+          ))}
+        </ul>
 
-      {/* ══════════════════════════════════════
-          HERO
-      ══════════════════════════════════════ */}
-      <section style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "flex-end", overflow: "hidden" }}>
+        <Link href="/login" className="swim-btn-ink" style={{ fontSize: 14, padding: "9px 20px" }}>
+          Connexion
+        </Link>
+      </nav>
+
+      {/* ── HERO ── */}
+      <section style={{ height: "100vh", position: "relative", display: "flex", alignItems: "center", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={P.hero}
-          alt=""
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
-        />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(175deg, rgba(5,18,60,0.18) 0%, rgba(5,18,60,0.68) 50%, rgba(8,25,85,0.94) 100%)" }} />
+        <img src={IMG.hero} alt="" aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.26) 100%)" }} />
 
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "0 32px 88px", width: "100%" }}>
-          <div className="au mono-label mono-label-white" style={{ marginBottom: 22 }}>
-            Natation · Séances sur-mesure · Garmin & COROS
-          </div>
-          <h1 className="au d1" style={{ ...S.serif, fontSize: "clamp(60px, 8.5vw, 120px)", lineHeight: 1.0, letterSpacing: "-0.025em", color: "#fff", marginBottom: 24 }}>
-            Nage avec<br />
-            <em>intention.</em>
+        <div style={{
+          position: "relative", zIndex: 2, padding: "0 80px", maxWidth: 700,
+          opacity: 0, transform: "translateY(20px)",
+          animation: "heroIn 600ms 200ms ease forwards",
+        }}>
+          <h1 style={{ fontFamily: F, fontStyle: "italic", fontWeight: 900, fontSize: "clamp(52px, 7vw, 88px)", color: "#fff", lineHeight: 1.05, marginBottom: 24, letterSpacing: "-0.02em" }}>
+            Swim.<br />Nage avec intention.
           </h1>
-          <p className="au d2" style={{ ...S.sans, fontSize: 19, color: "rgba(255,255,255,0.75)", marginBottom: 40, maxWidth: 480, fontWeight: 300, lineHeight: 1.65 }}>
-            Génère ta séance sur-mesure en 30 secondes.
-            Export direct sur ta montre — Garmin ou COROS.
+          <p style={{ fontFamily: S, fontSize: 18, color: "rgba(255,255,255,0.85)", lineHeight: 1.65, maxWidth: 480, marginBottom: 36 }}>
+            Génère des séances sur-mesure, exporte sur Garmin &amp; COROS,
+            apprends chaque nage pas à pas.
           </p>
-          <div className="au d3" style={{ display: "flex", gap: 12 }}>
-            <Link href="/generate" className="btn-pill btn-blue-pill">
-              Générer ma séance →
-            </Link>
-            <Link href="/library" className="btn-pill btn-white-pill">
-              Bibliothèque éducative
-            </Link>
-          </div>
-
-          <div className="au d4" style={{ display: "flex", gap: 48, marginTop: 56, paddingTop: 32, borderTop: "1px solid rgba(255,255,255,0.18)" }}>
-            {[["4 nages", "couvertes"], ["Garmin + COROS", "export direct"], ["PDF", "impression bassin"], ["Cloud", "sync multi-appareils"]].map(([v, l]) => (
-              <div key={l}>
-                <div style={{ ...S.serif, fontSize: 22, color: "#fff", lineHeight: 1 }}>{v}</div>
-                <div style={{ ...S.sans, fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 4, fontWeight: 300 }}>{l}</div>
-              </div>
-            ))}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link href="/generate" className="swim-btn-white">Créer une séance</Link>
+            <Link href="/history" className="swim-btn-ghost-white">Voir les séances prêtes</Link>
           </div>
         </div>
 
-        <div style={{ position: "absolute", bottom: -1, left: 0, right: 0, zIndex: 2, lineHeight: 0 }}>
-          <svg viewBox="0 0 1440 64" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 64 }}>
-            <path d="M0,32 C360,64 1080,0 1440,32 L1440,64 L0,64 Z" fill="var(--bg)" />
-          </svg>
+        {/* Scroll indicator */}
+        <div style={{
+          position: "absolute", bottom: 40, left: 80, zIndex: 2,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+          opacity: 0, animation: "heroIn 600ms 800ms ease forwards",
+        }}>
+          <span style={{ fontFamily: S, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Scroll</span>
+          <div style={{ width: 1, background: "rgba(255,255,255,0.5)", animation: "scrollLine 1.4s 1.2s ease-in-out infinite" }} />
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          CHIFFRES CLÉS
-      ══════════════════════════════════════ */}
-      <section style={{ background: "var(--blue)", padding: "52px 32px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", textAlign: "center" }}>
+      {/* ── EDITORIAL ── */}
+      <section className="swim-editorial" style={{ padding: "140px 80px", background: "#fff" }}>
+        <p className="reveal" style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(36px, 5vw, 64px)", color: "#111", maxWidth: 900, lineHeight: 1.15, letterSpacing: "-0.02em" }}>
+          &ldquo;Pour ceux qui veulent nager mieux. Pas juste nager.&rdquo;
+        </p>
+      </section>
+
+      <hr style={{ border: "none", borderTop: "1px solid #E5E5E5", margin: "0 80px" }} />
+
+      {/* ── 3 AXES ── */}
+      <section className="swim-axes" style={{ padding: "80px 80px 100px", background: "#fff" }}>
+        <h2 className="reveal" style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: 40, color: "#111", marginBottom: 56, letterSpacing: "-0.02em" }}>
+          Tout ce qu&apos;il te faut pour progresser
+        </h2>
+        <div className="axes-grid">
           {[
-            { n: "4",    label: "Nages couvertes",    sub: "Crawl · Dos · Brasse · Papillon" },
-            { n: "100%", label: "Sur-mesure",          sub: "Séances adaptées à ton profil" },
-            { n: "3",    label: "Formats d'export",    sub: "Garmin · COROS · PDF" },
-          ].map(({ n, label, sub }, i) => (
-            <div key={label} style={{ padding: "16px 32px", borderRight: i < 2 ? "1px solid rgba(255,255,255,0.15)" : "none" }}>
-              <div style={{ ...S.serif, fontSize: "clamp(44px, 5vw, 68px)", color: "#fff", lineHeight: 1, marginBottom: 8 }}>{n}</div>
-              <div style={{ ...S.sans, fontSize: 15, color: "rgba(255,255,255,0.9)", fontWeight: 500, marginBottom: 4 }}>{label}</div>
-              <div style={{ ...S.sans, fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 300 }}>{sub}</div>
+            { img: IMG.pool,    title: "Générateur de séances",  desc: "Configure ton niveau, ta nage, ta durée. La séance se construit en quelques secondes, structurée et prête à l'export.", link: "Générer une séance →",      href: "/generate", ratio: "3/4" },
+            { img: IMG.swimmer, title: "Export Garmin & COROS",  desc: "Retrouve ta séance directement sur ta montre, sans saisie manuelle. Format natif, compatible avec les deux plateformes.",  link: "Exporter une séance →",     href: "/generate", ratio: "4/3" },
+            { img: IMG.nature,  title: "Bibliothèque éducative", desc: "Des vidéos sélectionnées par nage et par niveau. Technique, drills, conseils — ce qu'il faut pour vraiment progresser.", link: "Explorer la bibliothèque →", href: "/library",  ratio: "4/3" },
+          ].map(({ img, title, desc, link, href, ratio }, i) => (
+            <div key={title} className="reveal" style={{ transitionDelay: `${i * 80}ms` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={img} alt={title} loading="lazy" style={{ width: "100%", aspectRatio: ratio, objectFit: "cover", display: "block", marginBottom: 20 }} />
+              <h3 style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: 24, color: "#111", marginBottom: 10, lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+                {title}
+              </h3>
+              <p style={{ fontSize: 15, color: "#6B7280", lineHeight: 1.65, marginBottom: 14 }}>{desc}</p>
+              <Link href={href} className="swim-axe-link">{link}</Link>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ══════════════════════════════════════
-          FONCTIONNALITÉS
-      ══════════════════════════════════════ */}
-      <Wave fromColor="var(--blue)" toColor="var(--bg)" />
-
-      <section style={{ background: "var(--bg)", padding: "16px 32px 80px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div className="mono-label" style={{ marginBottom: 14 }}>Fonctionnalités</div>
-            <h2 style={{ ...S.serif, fontSize: "clamp(34px, 4.5vw, 56px)", color: "var(--ink)", lineHeight: 1.05 }}>
-              Tout ce qu&apos;il faut<br />
-              <em>pour progresser.</em>
-            </h2>
+      {/* ── SPLIT ── */}
+      <section className="swim-split">
+        <div className="swim-split-text reveal-left" style={{ padding: "100px 80px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, background: "#fff" }}>
+          <span style={{ fontFamily: S, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7280" }}>
+            Pourquoi c&apos;est différent
+          </span>
+          <h2 style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(32px, 3.5vw, 48px)", color: "#111", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
+            La séance est prête avant même d&apos;arriver au bassin.
+          </h2>
+          <div style={{ fontSize: 18, color: "#6B7280", lineHeight: 1.65, maxWidth: 400 }}>
+            <p>Configure en 2 minutes. Exporte en 1 clic.</p>
+            <p>Retrouve ta séance directement sur ta montre.</p>
           </div>
+          <div style={{ marginTop: 8 }}>
+            <Link href="/generate" className="swim-btn-primary">
+              Créer ma première séance
+            </Link>
+          </div>
+        </div>
+        <div className="swim-split-img reveal-right" style={{ overflow: "hidden" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={IMG.hero} alt="Piscine couloirs" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        </div>
+      </section>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {[
-              { title: "Séances sur-mesure",        desc: "Configure ta nage, ton niveau et ton objectif. La séance s'adapte à toi, pas l'inverse.", photo: P.swimmer },
-              { title: "Export Garmin · COROS · PDF", desc: "Un clic pour ta montre, ou génère un PDF optimisé pour le bord du bassin.", photo: P.watch },
-              { title: "Compte & sync cloud",        desc: "Historique, favoris et stats sauvegardés. Accessibles depuis n'importe quel appareil.", photo: P.pool },
-            ].map(({ title, desc, photo }) => (
-              <div key={title} className="photo-card" style={{ borderRadius: 8, overflow: "hidden", boxShadow: "0 2px 20px rgba(0,0,0,0.08)" }}>
-                <div style={{ position: "relative", height: 420 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo} alt={title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(5,18,60,0.04) 30%, rgba(5,18,60,0.82) 75%, rgba(5,18,60,0.97) 100%)" }} />
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "28px 24px" }}>
-                    <h3 style={{ ...S.serif, fontSize: 24, color: "#fff", lineHeight: 1.2, marginBottom: 10 }}>{title}</h3>
-                    <p style={{ ...S.sans, fontSize: 13, color: "rgba(255,255,255,0.68)", lineHeight: 1.55, fontWeight: 300 }}>{desc}</p>
-                  </div>
+      {/* ── SÉANCES TEASER ── */}
+      <section className="swim-seances" style={{ padding: "100px 80px", background: "#F5F5F3" }}>
+        <div className="reveal" style={{ marginBottom: 40 }}>
+          <span style={{ fontFamily: S, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7280", display: "block", marginBottom: 12 }}>
+            Séances prêtes à l&apos;emploi
+          </span>
+          <h2 style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: 40, color: "#111", maxWidth: 500, lineHeight: 1.15, letterSpacing: "-0.02em", marginTop: 12 }}>
+            Pas le temps de configurer ?<br />On a ce qu&apos;il te faut.
+          </h2>
+        </div>
+
+        <div className="swim-seances-scroll" style={{ overflowX: "auto", margin: "0 -80px", padding: "0 80px 20px", scrollbarWidth: "none" }}>
+          <div style={{ display: "flex", gap: 20, width: "max-content" }}>
+            {SEANCES.map((s) => (
+              <div key={s.title} className="swim-seance-card" style={{ background: "#fff", border: "1px solid #E5E5E5", borderRadius: 12, padding: 24, width: 280, flexShrink: 0 }}>
+                <h3 style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: 20, color: "#111", marginBottom: 12, lineHeight: 1.2 }}>
+                  {s.title}
+                </h3>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: S, fontWeight: 500, fontSize: 12, background: s.featured ? "#0055A4" : "#D6E8F5", color: s.featured ? "#fff" : "#0055A4", padding: "4px 12px", borderRadius: 999 }}>{s.level}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: S, fontWeight: 500, fontSize: 12, background: "#D6E8F5", color: "#0055A4", padding: "4px 12px", borderRadius: 999 }}>{s.nage}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", fontFamily: S, fontWeight: 500, fontSize: 12, background: "#F5F5F3", color: "#6B7280", padding: "4px 12px", borderRadius: 999 }}>{s.duration}</span>
                 </div>
+                <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6, marginBottom: 20, borderTop: "1px solid #E5E5E5", paddingTop: 14 }}>{s.preview}</p>
+                <Link href="/history" className="swim-btn-ghost" style={{ width: "100%", textAlign: "center", justifyContent: "center" }}>
+                  Voir la séance
+                </Link>
               </div>
             ))}
           </div>
         </div>
+
+        <Link href="/history" className="swim-seances-more reveal">
+          Voir toutes les séances →
+        </Link>
       </section>
 
-      {/* ══════════════════════════════════════
-          COMMENT ÇA MARCHE
-      ══════════════════════════════════════ */}
-      <Wave fromColor="var(--bg)" toColor="var(--blue-pale)" flip />
-
-      <section style={{ background: "var(--blue-pale)", padding: "16px 32px 80px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 52 }}>
-            <div>
-              <div className="mono-label" style={{ marginBottom: 14 }}>Processus</div>
-              <h2 style={{ ...S.serif, fontSize: "clamp(34px, 4.5vw, 56px)", color: "var(--ink)", lineHeight: 1.05 }}>
-                Trois étapes.<br />
-                <em>C&apos;est tout.</em>
-              </h2>
-            </div>
-            <Link href="/generate" style={{ ...S.sans, fontSize: 14, color: "var(--blue)", textDecoration: "none" }}>
-              Essayer maintenant →
-            </Link>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {[
-              { step: "01", title: "Tu te connectes",          desc: "Crée ton profil. Tes séances et stats sont synchronisées sur tous tes appareils." },
-              { step: "02", title: "La séance se génère",      desc: "Nage, niveau, objectif, durée. Une séance structurée, sauvegardée automatiquement." },
-              { step: "03", title: "Tu exportes et tu nages",  desc: "Garmin, COROS ou PDF bord de bassin. Un clic, direction la piscine." },
-            ].map(({ step, title, desc }) => (
-              <div key={step} style={{
-                padding: "32px",
-                background: "var(--surface)",
-                border: "1px solid var(--rule-light)",
-                borderRadius: 8,
-                borderTop: "3px solid var(--blue)",
-              }}>
-                <div style={{ ...S.mono, fontSize: 28, color: "var(--rule)", lineHeight: 1, marginBottom: 24 }}>{step}</div>
-                <h3 style={{ ...S.serif, fontSize: 22, color: "var(--ink)", marginBottom: 12, lineHeight: 1.2 }}>{title}</h3>
-                <p style={{ ...S.sans, fontSize: 14, color: "var(--ink-soft)", lineHeight: 1.65, fontWeight: 300 }}>{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════
-          CTA FINAL
-      ══════════════════════════════════════ */}
-      <Wave fromColor="var(--blue-pale)" toColor="transparent" />
-
-      <section style={{ position: "relative", overflow: "hidden", minHeight: 460, display: "flex", alignItems: "center" }}>
+      {/* ── FULL CTA ── */}
+      <section style={{ position: "relative", height: "70vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={P.water} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(8,22,80,0.90) 0%, rgba(20,90,200,0.82) 100%)" }} />
-
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "80px 32px", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 48 }}>
-          <div>
-            <div className="mono-label mono-label-white" style={{ marginBottom: 18 }}>Prêt ?</div>
-            <h2 style={{ ...S.serif, fontSize: "clamp(34px, 4.5vw, 56px)", color: "#fff", lineHeight: 1.05, marginBottom: 16 }}>
-              Générer ta première<br />
-              <em>séance maintenant.</em>
-            </h2>
-            <p style={{ ...S.sans, fontSize: 16, color: "rgba(255,255,255,0.65)", fontWeight: 300, maxWidth: 400, lineHeight: 1.65 }}>
-              Pas de compte requis pour commencer. L&apos;IA, quand tu en auras besoin, tournera côté serveur — ta clé ne sera jamais exposée.
-            </p>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, flexShrink: 0 }}>
-            <Link href="/generate" className="btn-pill" style={{ fontSize: 16, padding: "16px 40px", background: "#fff", color: "var(--blue)", fontFamily: "var(--font-dm-sans)", fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 100 }}>
-              Générer ma séance →
-            </Link>
-            <Link href="/library" className="btn-pill btn-white-pill" style={{ justifyContent: "center" }}>
-              Voir la bibliothèque
-            </Link>
-          </div>
+        <img src={IMG.cta} alt="" aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+        <div className="reveal" style={{ position: "relative", zIndex: 2, textAlign: "center", padding: "0 40px" }}>
+          <h2 style={{ fontFamily: F, fontStyle: "italic", fontWeight: 900, fontSize: "clamp(40px, 5vw, 64px)", color: "#fff", marginBottom: 16, letterSpacing: "-0.02em" }}>
+            Prêt à nager ?
+          </h2>
+          <p style={{ fontSize: 18, color: "rgba(255,255,255,0.9)", marginBottom: 32, lineHeight: 1.5, fontFamily: S }}>
+            Ta première séance est à deux minutes.
+          </p>
+          <Link href="/generate" className="swim-btn-white">Créer une séance</Link>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer style={{ background: "var(--ink)", padding: "32px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <span style={{ ...S.serif, fontSize: 20, color: "#fff" }}>swimgen</span>
-          <div style={{ display: "flex", gap: 28 }}>
-            {[["Générer", "/generate"], ["Bibliothèque", "/library"], ["Progression", "/history"], ["Connexion", "/login"]].map(([l, h]) => (
-              <Link key={h} href={h} style={{ ...S.sans, fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>{l}</Link>
-            ))}
-          </div>
-          <span style={{ ...S.mono, fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em" }}>MIT · 2026</span>
+      {/* ── FOOTER ── */}
+      <footer className="swim-footer" style={{ background: "#fff", borderTop: "1px solid #E5E5E5", padding: "60px 80px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 40, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontFamily: F, fontStyle: "italic", fontWeight: 700, fontSize: 20, color: "#111" }}>swim</div>
+          <p style={{ fontSize: 13, color: "#6B7280", marginTop: 8, lineHeight: 1.5 }}>
+            Nage avec intention.<br />
+            Ton entraînement, configuré et exporté en minutes.
+          </p>
+          <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Compatible Garmin &amp; COROS
+          </p>
         </div>
+        <ul style={{ display: "flex", gap: 32, listStyle: "none", alignItems: "flex-start", margin: 0, padding: 0, flexWrap: "wrap" }}>
+          {([["Générer", "/generate"], ["Séances", "/history"], ["Apprendre", "/library"], ["Connexion", "/login"]] as [string, string][]).map(([l, h]) => (
+            <li key={h}>
+              <Link href={h} className="swim-footer-link">{l}</Link>
+            </li>
+          ))}
+        </ul>
       </footer>
+
     </div>
   );
 }
