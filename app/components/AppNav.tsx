@@ -73,7 +73,7 @@ export default function AppNav() {
                     fontFamily: "var(--font-dm-sans)",
                     fontSize: 15,
                     color: active ? "var(--encre)" : "var(--gris-doux)",
-                    textDecoration: active ? "underline" : "none",
+                    textDecorationLine: active ? "underline" : "none",
                     textDecorationColor: "var(--bleu-piscine)",
                     textUnderlineOffset: "4px",
                     transition: "color 150ms",
