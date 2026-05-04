@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/generate", label: "Générer" },
-  { href: "/history",  label: "Séances" },
-  { href: "/library",  label: "Apprendre" },
+  { href: "/generate",  label: "Générer" },
+  { href: "/history",   label: "Séances" },
+  { href: "/library",   label: "Apprendre" },
+  { href: "/dashboard", label: "Tableau de bord" },
 ];
 
 export default function AppNav() {

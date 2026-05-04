@@ -17,6 +17,7 @@ export interface TrainingSet {
   stroke:      string
   restSeconds: number
   intensity:   Intensity
+  equipment?:  string
   note?:       string
 }
 
