@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const F = "var(--font-fraunces), Georgia, serif";
 const S = "var(--font-dm-sans), system-ui, sans-serif";
@@ -81,6 +83,8 @@ function Divider() {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [tab, setTab]                   = useState<Tab>("login");
   const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [showSignupPwd, setShowSignupPwd] = useState(false);
@@ -112,20 +116,31 @@ export default function LoginPage() {
     setStrength(val ? STRENGTHS[Math.min(score, 4)] : null);
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!loginEmail || !loginPwd) { setError("Merci de remplir tous les champs."); return; }
     if (!loginEmail.includes("@")) { setError("Email invalide."); return; }
     setError("");
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 900);
+
+    const result = await signIn("credentials", {
+      email:    loginEmail,
+      password: loginPwd,
+      redirect: false,
+    });
+
+    setLoading(false);
+
+    if (!result || result.error) {
+      setError("Email ou mot de passe incorrect.");
+    } else {
+      setSuccess(true);
+      router.push("/dashboard");
+    }
   }
 
   function handleSignup() {
-    if (!firstName || !signupEmail || !signupPwd) { setError("Merci de remplir tous les champs obligatoires."); return; }
-    if (signupPwd.length < 8) { setError("Le mot de passe doit contenir au moins 8 caractères."); return; }
-    setError("");
-    setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 1000);
+    // TODO (étape 3 – Prisma) : créer le compte en base, puis signIn("credentials", ...)
+    setError("La création de compte sera disponible à l'étape suivante (base de données).");
   }
 
   return (
