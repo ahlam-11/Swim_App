@@ -447,16 +447,25 @@ export default function GeneratePage() {
                   <button
                     onClick={handleSave}
                     disabled={saveLoading || !!savedSessionId}
-                    style={{ ...actionBtnStyle, color: savedSessionId ? "var(--bleu-piscine)" : saveLoading ? "var(--gris-doux)" : "var(--gris-doux)", opacity: (saveLoading || !!savedSessionId) ? 0.7 : 1 }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      fontFamily: "var(--font-dm-sans)", fontSize: 13, fontWeight: 600,
+                      color: savedSessionId ? "var(--bleu-piscine)" : "#fff",
+                      background: savedSessionId ? "var(--bleu-clair)" : "var(--bleu-piscine)",
+                      border: "none", borderRadius: 999,
+                      padding: "7px 16px", cursor: (saveLoading || !!savedSessionId) ? "default" : "pointer",
+                      opacity: saveLoading ? 0.7 : 1,
+                      transition: "background 200ms, color 200ms",
+                    }}
                   >
                     {savedSessionId ? (
                       <>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="var(--bleu-piscine)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="var(--bleu-piscine)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         Sauvegardée
                       </>
                     ) : (
                       <>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         {saveLoading ? "Sauvegarde…" : "Sauvegarder"}
                       </>
                     )}
