@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 const NAV_ITEMS = [
   { href: "/generate",  label: "Générer" },
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
 export default function AppNav() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
@@ -88,23 +90,44 @@ export default function AppNav() {
 
         <div className="flex-1 lg:hidden" />
 
-        <Link
-          href="/login"
-          style={{
-            fontFamily: "var(--font-dm-sans)",
-            fontSize: 14,
-            fontWeight: 500,
-            color: "var(--encre)",
-            textDecoration: "none",
-            border: "1.5px solid var(--encre)",
-            borderRadius: 999,
-            padding: "7px 18px",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          Connexion
-        </Link>
+        {session ? (
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            style={{
+              fontFamily: "var(--font-dm-sans)",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "var(--encre)",
+              background: "none",
+              border: "1.5px solid var(--encre)",
+              borderRadius: 999,
+              padding: "7px 18px",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              cursor: "pointer",
+            }}
+          >
+            Déconnexion
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            style={{
+              fontFamily: "var(--font-dm-sans)",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "var(--encre)",
+              textDecoration: "none",
+              border: "1.5px solid var(--encre)",
+              borderRadius: 999,
+              padding: "7px 18px",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Connexion
+          </Link>
+        )}
       </nav>
 
       {/* ── Mobile bottom tab bar ── */}

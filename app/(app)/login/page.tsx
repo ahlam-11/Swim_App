@@ -39,14 +39,6 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg width="16" height="18" viewBox="0 0 16 18" fill="none">
-      <path d="M13.56 9.6c-.02-2.1 1.71-3.12 1.79-3.17C14.3 4.5 12.53 4.27 11.9 4.25c-1.4-.14-2.76.83-3.47.83-.72 0-1.8-.82-2.97-.8C3.96 4.3 2.6 5.13 1.86 6.44c-1.51 2.62-.39 6.49 1.07 8.62.72 1.04 1.57 2.2 2.69 2.16 1.08-.04 1.49-.7 2.8-.7 1.3 0 1.67.7 2.8.67 1.16-.02 1.9-1.05 2.6-2.1a9.5 9.5 0 001.19-2.42c-.03-.01-2.27-.87-2.3-3.07h-.15zm-2.16-5.64c.6-.72 1-1.72.89-2.72-.86.04-1.9.58-2.52 1.29-.55.63-.1 1.73.8 2.72.87-.03 1.23-.57 1.83-1.29z" fill="#111111" />
-    </svg>
-  );
-}
-
 function FormField({ label, labelRight, children }: { label: string; labelRight?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
@@ -61,14 +53,13 @@ function FormField({ label, labelRight, children }: { label: string; labelRight?
 
 function SocialButtons() {
   return (
-    <>
-      <button type="button" className="swim-btn-social">
-        <GoogleIcon /> Continuer avec Google
-      </button>
-      <button type="button" className="swim-btn-social">
-        <AppleIcon /> Continuer avec Apple
-      </button>
-    </>
+    <button
+      type="button"
+      className="swim-btn-social"
+      onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+    >
+      <GoogleIcon /> Continuer avec Google
+    </button>
   );
 }
 
@@ -138,9 +129,45 @@ export default function LoginPage() {
     }
   }
 
-  function handleSignup() {
-    // TODO (étape 3 – Prisma) : créer le compte en base, puis signIn("credentials", ...)
-    setError("La création de compte sera disponible à l'étape suivante (base de données).");
+  async function handleSignup() {
+    if (!firstName || !signupEmail || !signupPwd) { setError("Merci de remplir tous les champs."); return; }
+    if (!signupEmail.includes("@")) { setError("Email invalide."); return; }
+    if (signupPwd.length < 8) { setError("Mot de passe trop court (8 caractères min.)."); return; }
+    setError("");
+    setLoading(true);
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email:    signupEmail,
+        password: signupPwd,
+        name:     `${firstName} ${lastName}`.trim(),
+        level:    selectedLevel.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+                    .replace("intermediaire", "intermediaire"),
+      }),
+    });
+
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error ?? "Erreur lors de la création du compte.");
+      return;
+    }
+
+    const result = await signIn("credentials", {
+      email:    signupEmail,
+      password: signupPwd,
+      redirect: false,
+    });
+
+    if (!result || result.error) {
+      setError("Compte créé mais connexion échouée. Essaie de te connecter.");
+    } else {
+      setSuccess(true);
+      router.push("/dashboard");
+    }
   }
 
   return (
@@ -150,7 +177,7 @@ export default function LoginPage() {
       <div className="hidden md:block" style={{ position: "relative", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1530549387789-4c1017266635?w=1200&q=80"
+          src="https://images.unsplash.com/photo-1560090995-c35da5a6cbfe?w=1200&q=80"
           alt=""
           aria-hidden
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
