@@ -92,10 +92,18 @@ export default function GeneratePage() {
   const [goal,          setGoal]          = useState<Goal>("endurance");
   const [durationIdx,   setDurationIdx]   = useState(2);
   const [equipment,     setEquipment]     = useState<Set<EquipmentKey>>(new Set(["planche", "pullbuoy"]));
-  const [accordionOpen, setAccordionOpen] = useState(false);
-  const [loading,       setLoading]       = useState(false);
-  const [session,       setSession]       = useState<TrainingSession | null>(null);
-  const [visible,       setVisible]       = useState(false);
+  const [accordionOpen,   setAccordionOpen]   = useState(false);
+  const [loading,         setLoading]         = useState(false);
+  const [session,         setSession]         = useState<TrainingSession | null>(null);
+  const [visible,         setVisible]         = useState(false);
+  const [savedSessionId,  setSavedSessionId]  = useState<string | null>(null);
+  const [saveLoading,     setSaveLoading]     = useState(false);
+  const [saveError,       setSaveError]       = useState<string | null>(null);
+  const [showCompleteForm, setShowCompleteForm] = useState(false);
+  const [actualDuration,  setActualDuration]  = useState("");
+  const [actualDistance,  setActualDistance]  = useState("");
+  const [completeLoading, setCompleteLoading] = useState(false);
+  const [completeSuccess, setCompleteSuccess] = useState(false);
 
   const countUpValue = useCountUp(session?.totalDistance ?? 0, visible);
 
@@ -107,10 +115,70 @@ export default function GeneratePage() {
     });
   }
 
+  async function handleSave() {
+    if (!session) return;
+    setSaveLoading(true);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:             session.title,
+          subtitle:          session.subtitle,
+          level:             session.level,
+          stroke:            session.stroke,
+          goal:              session.goal,
+          totalDistance:     session.totalDistance,
+          estimatedDuration: session.estimatedDuration,
+          poolLength:        session.poolLength,
+          sets:              session.sets,
+        }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        setSaveError(error ?? "Erreur lors de la sauvegarde.");
+      } else {
+        const { id } = await res.json();
+        setSavedSessionId(id);
+      }
+    } catch {
+      setSaveError("Erreur réseau.");
+    } finally {
+      setSaveLoading(false);
+    }
+  }
+
+  async function handleComplete(e: React.FormEvent) {
+    e.preventDefault();
+    if (!savedSessionId) return;
+    setCompleteLoading(true);
+    try {
+      const res = await fetch(`/api/sessions/${savedSessionId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actualDuration: Number(actualDuration),
+          actualDistance: Number(actualDistance),
+        }),
+      });
+      if (res.ok) {
+        setCompleteSuccess(true);
+        setShowCompleteForm(false);
+      }
+    } finally {
+      setCompleteLoading(false);
+    }
+  }
+
   function handleGenerate() {
     setLoading(true);
     setSession(null);
     setVisible(false);
+    setSavedSessionId(null);
+    setSaveError(null);
+    setShowCompleteForm(false);
+    setCompleteSuccess(false);
     setTimeout(() => {
       const data = generateMockSession({
         level,
@@ -376,10 +444,26 @@ export default function GeneratePage() {
                   <span style={badgeStyle(true)}>{formatDuration(session.estimatedDuration)}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
-                  <button style={actionBtnStyle}>
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Sauvegarder
+                  <button
+                    onClick={handleSave}
+                    disabled={saveLoading || !!savedSessionId}
+                    style={{ ...actionBtnStyle, color: savedSessionId ? "var(--bleu-piscine)" : saveLoading ? "var(--gris-doux)" : "var(--gris-doux)", opacity: (saveLoading || !!savedSessionId) ? 0.7 : 1 }}
+                  >
+                    {savedSessionId ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="var(--bleu-piscine)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Sauvegardée
+                      </>
+                    ) : (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        {saveLoading ? "Sauvegarde…" : "Sauvegarder"}
+                      </>
+                    )}
                   </button>
+                  {saveError && (
+                    <span style={{ fontSize: 12, color: "#EF4444" }}>{saveError}</span>
+                  )}
                   <div style={{ width: 1, height: 14, background: "var(--ligne)" }} />
                   <button style={actionBtnStyle}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -450,6 +534,73 @@ export default function GeneratePage() {
                   Exporter vers ma montre
                 </button>
               </div>
+
+              {/* J'ai nagé cette séance */}
+              {savedSessionId && !completeSuccess && (
+                <div style={{ marginTop: 28, padding: 24, background: "var(--bleu-clair)", borderRadius: 16 }}>
+                  {!showCompleteForm ? (
+                    <button
+                      onClick={() => setShowCompleteForm(true)}
+                      style={{ width: "100%", fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 18, color: "var(--bleu-piscine)", background: "none", border: "1.5px solid var(--bleu-piscine)", borderRadius: 999, padding: "12px 24px", cursor: "pointer" }}
+                    >
+                      J&apos;ai nagé cette séance
+                    </button>
+                  ) : (
+                    <form onSubmit={handleComplete} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      <p style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 600, fontSize: 15, color: "var(--encre)", margin: 0 }}>
+                        Enregistrer la séance
+                      </p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <span style={{ fontFamily: "var(--font-dm-sans)", fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--gris-doux)" }}>Durée (min)</span>
+                          <input
+                            type="number" min={1} required
+                            value={actualDuration}
+                            onChange={e => setActualDuration(e.target.value)}
+                            placeholder={String(session?.estimatedDuration ?? "")}
+                            style={{ fontFamily: "var(--font-dm-sans)", fontSize: 15, border: "1.5px solid var(--ligne)", borderRadius: 8, padding: "8px 12px", background: "var(--blanc)", color: "var(--encre)", outline: "none" }}
+                          />
+                        </label>
+                        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <span style={{ fontFamily: "var(--font-dm-sans)", fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--gris-doux)" }}>Distance (m)</span>
+                          <input
+                            type="number" min={1} required
+                            value={actualDistance}
+                            onChange={e => setActualDistance(e.target.value)}
+                            placeholder={String(session?.totalDistance ?? "")}
+                            style={{ fontFamily: "var(--font-dm-sans)", fontSize: 15, border: "1.5px solid var(--ligne)", borderRadius: 8, padding: "8px 12px", background: "var(--blanc)", color: "var(--encre)", outline: "none" }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <button
+                          type="submit"
+                          disabled={completeLoading}
+                          style={{ flex: 1, fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 16, background: "var(--bleu-piscine)", color: "var(--blanc)", border: "none", borderRadius: 999, padding: "11px 0", cursor: completeLoading ? "not-allowed" : "pointer", opacity: completeLoading ? 0.7 : 1 }}
+                        >
+                          {completeLoading ? "Enregistrement…" : "Confirmer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCompleteForm(false)}
+                          style={{ fontFamily: "var(--font-dm-sans)", fontSize: 14, color: "var(--gris-doux)", background: "none", border: "none", cursor: "pointer" }}
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {completeSuccess && (
+                <div style={{ marginTop: 28, padding: 24, background: "#F0FDF4", borderRadius: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#16A34A" strokeWidth="1.5"/><path d="M6 10l3 3 5-5" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span style={{ fontFamily: "var(--font-dm-sans)", fontSize: 15, color: "#16A34A", fontWeight: 500 }}>
+                    Séance enregistrée dans ton historique !
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
