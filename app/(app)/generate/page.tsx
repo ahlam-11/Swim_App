@@ -104,6 +104,7 @@ export default function GeneratePage() {
   const [exportOpen,    setExportOpen]    = useState(false);
   const [savedId,       setSavedId]       = useState<string | null>(null);
   const [saving,        setSaving]        = useState(false);
+  const [saveError,     setSaveError]     = useState<string | null>(null);
   const [customTitle,   setCustomTitle]   = useState("");
   const [editingTitle,  setEditingTitle]  = useState(false);
 
@@ -120,6 +121,7 @@ export default function GeneratePage() {
   async function handleSave() {
     if (!session || saving || savedId) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res  = await fetch("/api/sessions", {
         method:  "POST",
@@ -128,6 +130,9 @@ export default function GeneratePage() {
       });
       const data = await res.json();
       if (res.ok) setSavedId(data.id);
+      else setSaveError(data.error ?? "Erreur lors de la sauvegarde.");
+    } catch {
+      setSaveError("Erreur réseau.");
     } finally {
       setSaving(false);
     }
@@ -138,6 +143,7 @@ export default function GeneratePage() {
     setSession(null);
     setVisible(false);
     setSavedId(null);
+    setSaveError(null);
     setTimeout(() => {
       const data = generateMockSession({
         level,
@@ -451,6 +457,9 @@ export default function GeneratePage() {
                     )}
                     {saving ? "Sauvegarde…" : savedId ? "Sauvegardée" : "Sauvegarder"}
                   </button>
+                  {saveError && (
+                    <span style={{ fontSize: 12, color: "#EF4444" }}>{saveError}</span>
+                  )}
                   <div style={{ width: 1, height: 14, background: "var(--ligne)" }} />
                   <button onClick={() => setExportOpen(true)} style={actionBtnStyle}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -521,6 +530,7 @@ export default function GeneratePage() {
                   Exporter vers ma montre
                 </button>
               </div>
+
             </div>
           )}
         </div>
