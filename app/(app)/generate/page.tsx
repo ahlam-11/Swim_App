@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { generateMockSession } from "@/app/lib/services/mockGenerator";
 import type { TrainingSession, Level, Goal, Stroke } from "@/app/lib/types";
+import ExportModal from "@/app/components/ExportModal";
 
 type EquipmentKey = "planche" | "pullbuoy" | "palmes" | "plaquettes" | "elastique" | "tuba";
 
@@ -92,10 +93,19 @@ export default function GeneratePage() {
   const [goal,          setGoal]          = useState<Goal>("endurance");
   const [durationIdx,   setDurationIdx]   = useState(2);
   const [equipment,     setEquipment]     = useState<Set<EquipmentKey>>(new Set(["planche", "pullbuoy"]));
-  const [accordionOpen, setAccordionOpen] = useState(false);
-  const [loading,       setLoading]       = useState(false);
+  const [techFocus,      setTechFocus]      = useState<string | null>(null);
+  const [intensity,      setIntensity]      = useState(3);
+  const [includeWarmup,  setIncludeWarmup]  = useState(true);
+  const [includeCooldown,setIncludeCooldown]= useState(true);
+  const [accordionOpen,  setAccordionOpen]  = useState(false);
+  const [loading,        setLoading]        = useState(false);
   const [session,       setSession]       = useState<TrainingSession | null>(null);
   const [visible,       setVisible]       = useState(false);
+  const [exportOpen,    setExportOpen]    = useState(false);
+  const [savedId,       setSavedId]       = useState<string | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [customTitle,   setCustomTitle]   = useState("");
+  const [editingTitle,  setEditingTitle]  = useState(false);
 
   const countUpValue = useCountUp(session?.totalDistance ?? 0, visible);
 
@@ -107,19 +117,42 @@ export default function GeneratePage() {
     });
   }
 
+  async function handleSave() {
+    if (!session || saving || savedId) return;
+    setSaving(true);
+    try {
+      const res  = await fetch("/api/sessions", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ ...session, title: customTitle }),
+      });
+      const data = await res.json();
+      if (res.ok) setSavedId(data.id);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function handleGenerate() {
     setLoading(true);
     setSession(null);
     setVisible(false);
+    setSavedId(null);
     setTimeout(() => {
       const data = generateMockSession({
         level,
         stroke,
         goal,
-        durationMinutes: DURATION_MINS[durationIdx],
-        poolLength: 25,
+        durationMinutes:  DURATION_MINS[durationIdx],
+        poolLength:        25,
+        techFocus:         techFocus  ?? undefined,
+        intensity,
+        includeWarmup,
+        includeCooldown,
       });
       setSession(data);
+      setCustomTitle(data.title);
+      setEditingTitle(false);
       setLoading(false);
       setTimeout(() => setVisible(true), 50);
     }, 1200);
@@ -142,6 +175,7 @@ export default function GeneratePage() {
   };
 
   return (
+    <>
     <div style={{ background: "var(--blanc)", minHeight: "100vh" }}>
 
       {/* PAGE HEADER */}
@@ -283,7 +317,11 @@ export default function GeneratePage() {
                   <ConfigLabel>Focus technique</ConfigLabel>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {["Bras","Jambes","Respiration","Virage"].map(f => (
-                      <button key={f} className="swim-chip">{f}</button>
+                      <button
+                        key={f}
+                        onClick={() => setTechFocus(f === techFocus ? null : f)}
+                        className={`swim-chip${techFocus === f ? " selected" : ""}`}
+                      >{f}</button>
                     ))}
                   </div>
                 </div>
@@ -291,14 +329,18 @@ export default function GeneratePage() {
                   <ConfigLabel>Intensité</ConfigLabel>
                   <div style={{ display: "flex", gap: 20 }}>
                     {[1,2,3,4,5].map(n => (
-                      <button key={n} style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 500, fontSize: 16, color: n === 3 ? "var(--bleu-piscine)" : "var(--gris-doux)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: n === 3 ? "underline" : "none", textUnderlineOffset: "3px" }}>{n}</button>
+                      <button
+                        key={n}
+                        onClick={() => setIntensity(n)}
+                        style={{ fontFamily: "var(--font-dm-sans)", fontWeight: 500, fontSize: 16, color: n === intensity ? "var(--bleu-piscine)" : "var(--gris-doux)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: n === intensity ? "underline" : "none", textUnderlineOffset: "3px" }}
+                      >{n}</button>
                     ))}
                   </div>
                 </div>
-                {[["Échauffement", true], ["Retour au calme", true]].map(([label, on]) => (
-                  <div key={label as string} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                {([["Échauffement", includeWarmup, setIncludeWarmup], ["Retour au calme", includeCooldown, setIncludeCooldown]] as [string, boolean, (v: boolean) => void][]).map(([label, on, toggle]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontFamily: "var(--font-dm-sans)", fontSize: 15, color: "var(--encre)" }}>{label}</span>
-                    <div style={{ width: 40, height: 22, borderRadius: 999, background: on ? "var(--bleu-piscine)" : "var(--ligne)", position: "relative", cursor: "pointer", transition: "background 200ms" }}>
+                    <div onClick={() => toggle(!on)} style={{ width: 40, height: 22, borderRadius: 999, background: on ? "var(--bleu-piscine)" : "var(--ligne)", position: "relative", cursor: "pointer", transition: "background 200ms" }}>
                       <div style={{ position: "absolute", top: 3, width: 16, height: 16, borderRadius: "50%", background: "white", transition: "left 200ms ease", left: on ? 21 : 3 }} />
                     </div>
                   </div>
@@ -364,9 +406,34 @@ export default function GeneratePage() {
             <div>
               {/* Header */}
               <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--ligne)" }}>
-                <h2 style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 32, color: "var(--encre)", marginBottom: 8, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
-                  {session.title}
-                </h2>
+                {editingTitle ? (
+                  <input
+                    autoFocus
+                    value={customTitle}
+                    onChange={e => setCustomTitle(e.target.value)}
+                    onBlur={() => setEditingTitle(false)}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setEditingTitle(false); }}
+                    style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 32, color: "var(--encre)", marginBottom: 8, letterSpacing: "-0.01em", lineHeight: 1.15, border: "none", borderBottom: "2px solid var(--bleu-piscine)", outline: "none", background: "transparent", width: "100%", padding: 0 }}
+                  />
+                ) : (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+                    <h2
+                      onClick={() => !savedId && setEditingTitle(true)}
+                      style={{ fontFamily: "var(--font-fraunces)", fontStyle: "italic", fontWeight: 700, fontSize: 32, color: "var(--encre)", letterSpacing: "-0.01em", lineHeight: 1.15, flex: 1, cursor: savedId ? "default" : "text" }}
+                    >
+                      {customTitle}
+                    </h2>
+                    {!savedId && (
+                      <button
+                        onClick={() => setEditingTitle(true)}
+                        title="Renommer"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gris-doux)", padding: "8px 0", flexShrink: 0 }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9.5 1.5l2 2-7 7H2.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    )}
+                  </div>
+                )}
                 <p style={{ fontSize: 14, color: "var(--gris-doux)", marginBottom: 12, lineHeight: 1.5 }}>
                   {session.subtitle}
                 </p>
@@ -376,12 +443,16 @@ export default function GeneratePage() {
                   <span style={badgeStyle(true)}>{formatDuration(session.estimatedDuration)}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
-                  <button style={actionBtnStyle}>
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Sauvegarder
+                  <button onClick={handleSave} disabled={saving || !!savedId} style={{ ...actionBtnStyle, color: savedId ? "#22C55E" : "var(--gris-doux)" }}>
+                    {savedId ? (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="#22C55E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M8 2h4v4M6 8L12 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    )}
+                    {saving ? "Sauvegarde…" : savedId ? "Sauvegardée" : "Sauvegarder"}
                   </button>
                   <div style={{ width: 1, height: 14, background: "var(--ligne)" }} />
-                  <button style={actionBtnStyle}>
+                  <button onClick={() => setExportOpen(true)} style={actionBtnStyle}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     Exporter
                   </button>
@@ -446,7 +517,7 @@ export default function GeneratePage() {
                   </div>
                   <div style={{ fontSize: 14, color: "var(--gris-doux)", marginTop: 4 }}>Distance totale estimée</div>
                 </div>
-                <button className="swim-btn-primary" style={{ whiteSpace: "nowrap" }}>
+                <button onClick={() => setExportOpen(true)} className="swim-btn-primary" style={{ whiteSpace: "nowrap" }}>
                   Exporter vers ma montre
                 </button>
               </div>
@@ -455,5 +526,10 @@ export default function GeneratePage() {
         </div>
       </div>
     </div>
+
+    {exportOpen && session && (
+      <ExportModal session={session} sessionId={savedId ?? undefined} onClose={() => setExportOpen(false)} />
+    )}
+    </>
   );
 }
