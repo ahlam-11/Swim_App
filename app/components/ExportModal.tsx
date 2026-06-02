@@ -110,6 +110,7 @@ export default function ExportModal({ session, sessionId, onClose }: Props) {
       }}>
         <button
           onClick={onClose}
+          aria-label="Fermer"
           style={{
             position: "absolute", top: 16, right: 16, background: "none", border: "none",
             cursor: "pointer", color: "var(--gris-doux)", fontSize: 18, lineHeight: 1,

@@ -339,6 +339,7 @@ export default function HistoryPage() {
           <div style={{ background: "var(--blanc)", borderRadius: 16, maxWidth: 600, width: "100%", maxHeight: "80vh", overflowY: "auto", padding: 40, position: "relative" }}>
             <button
               onClick={() => setModal(null)}
+              aria-label="Fermer"
               style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", cursor: "pointer", color: "var(--gris-doux)", fontSize: 20, lineHeight: 1 }}
             >
               ✕
