@@ -51,8 +51,8 @@ const OPTIONS: Option[] = [
   {
     id: "coros",
     label: "COROS",
-    description: "Fichier .tcx à importer dans COROS Training Hub → Workouts → Import.",
-    ext: ".tcx",
+    description: "Fichier .fit natif : training.coros.com → Training → Workouts → Import → sync montre via l'app COROS.",
+    ext: ".fit",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -63,16 +63,24 @@ const OPTIONS: Option[] = [
   },
 ];
 
+const COROS_STEPS = [
+  "Va sur training.coros.com et connecte-toi",
+  "Clique sur Training → Workouts → Import",
+  "Sélectionne le fichier .fit téléchargé",
+  "Ouvre l'app COROS sur ton téléphone — la séance sync automatiquement sur ta montre",
+];
+
 export default function ExportModal({ session, sessionId, onClose }: Props) {
-  const [loading, setLoading] = useState<Option["id"] | null>(null);
-  const [done, setDone]       = useState<Option["id"] | null>(null);
+  const [loading, setLoading]           = useState<Option["id"] | null>(null);
+  const [done, setDone]                 = useState<Option["id"] | null>(null);
+  const [showCorosGuide, setCorosGuide] = useState(false);
 
   async function handleExport(id: Option["id"]) {
     setLoading(id);
     try {
       if (id === "pdf")    await exportToPDF(session);
       if (id === "garmin") exportToGarmin(session);
-      if (id === "coros")  exportToCoros(session);
+      if (id === "coros")  { exportToCoros(session); setCorosGuide(true); }
 
       if (sessionId && id !== "pdf") {
         await fetch(`/api/sessions/${sessionId}/log`, {
@@ -170,6 +178,53 @@ export default function ExportModal({ session, sessionId, onClose }: Props) {
               </button>
             );
           })}
+
+          {/* Guide d'import COROS — toggle manuel ou auto après export */}
+          <button
+            onClick={() => setCorosGuide(v => !v)}
+            style={{
+              alignSelf: "flex-start", background: "none", border: "none",
+              cursor: "pointer", padding: "2px 0", display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            <span style={{
+              fontSize: 11, color: "var(--bleu-piscine)", fontWeight: 500,
+              textDecoration: "underline", textUnderlineOffset: 2,
+            }}>
+              {showCorosGuide ? "▾" : "▸"} Comment importer sur ma montre COROS ?
+            </span>
+          </button>
+
+          {showCorosGuide && (
+            <div style={{
+              padding: "14px 16px", background: "#F0F7FF",
+              borderRadius: 10, border: "1px solid #BDD7F5",
+            }}>
+              <p style={{
+                fontSize: 12, fontWeight: 600, color: "var(--bleu-piscine)",
+                marginBottom: 10,
+              }}>
+                4 étapes pour mettre la séance sur ta montre
+              </p>
+              {COROS_STEPS.map((step, i) => (
+                <div key={i} style={{
+                  display: "flex", gap: 10, marginBottom: i < COROS_STEPS.length - 1 ? 8 : 0,
+                }}>
+                  <span style={{
+                    width: 20, height: 20, borderRadius: "50%",
+                    background: "var(--bleu-piscine)", color: "white",
+                    fontSize: 11, fontWeight: 700, flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {i + 1}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--encre)", lineHeight: 1.5 }}>
+                    {step}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
