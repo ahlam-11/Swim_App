@@ -1,37 +1,41 @@
 import { NextResponse } from "next/server"
+import { z } from "zod"
 import { auth } from "@/app/lib/auth"
 import { prisma } from "@/app/lib/prisma"
+import { validationError, apiError } from "@/app/lib/api-error"
+
+const CompleteSchema = z.object({
+  actualDuration: z.number().int().min(1).max(480),
+  actualDistance: z.number().int().min(1).max(20000),
+})
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 })
-  }
+  if (!session?.user?.id)
+    return apiError(401, "UNAUTHORIZED", "Non authentifié.")
+
+  const body   = await req.json().catch(() => null)
+  const parsed = CompleteSchema.safeParse(body)
+  if (!parsed.success) return validationError(parsed.error)
 
   const { id } = await params
-  const { actualDuration, actualDistance } = await req.json()
+  const { actualDuration, actualDistance } = parsed.data
 
-  if (!actualDuration || !actualDistance) {
-    return NextResponse.json({ error: "Durée et distance requises." }, { status: 400 })
-  }
-
-  // Vérifie que la séance appartient bien à cet utilisateur
   const training = await prisma.trainingSession.findFirst({
     where: { id, userId: session.user.id },
   })
-  if (!training) {
-    return NextResponse.json({ error: "Séance introuvable." }, { status: 404 })
-  }
+  if (!training)
+    return apiError(404, "NOT_FOUND", "Séance introuvable.")
 
   const log = await prisma.completedLog.create({
     data: {
       userId:         session.user.id,
       sessionId:      id,
-      actualDuration: Number(actualDuration),
-      actualDistance: Number(actualDistance),
+      actualDuration,
+      actualDistance,
     },
   })
 

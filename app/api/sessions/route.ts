@@ -1,31 +1,59 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { auth } from "@/app/lib/auth"
 import { prisma } from "@/app/lib/prisma"
+import { validationError, apiError } from "@/app/lib/api-error"
 import type { Stroke, Phase, Intensity } from "@/app/generated/prisma/client"
 
 const STROKE_TO_DB: Record<string, Stroke> = {
-  crawl:    "crawl",
-  dos:      "dos",
-  brasse:   "brasse",
-  papillon: "papillon",
-  "4nages": "four_nages",
+  crawl:      "crawl",
+  dos:        "dos",
+  brasse:     "brasse",
+  papillon:   "papillon",
+  "4nages":   "four_nages",
 }
+
+const SetSchema = z.object({
+  phase:       z.enum(["warmup", "drills", "main", "cooldown"]),
+  label:       z.string().min(1).max(200),
+  repetitions: z.number().int().min(1).max(50),
+  distance:    z.number().int().min(1).max(5000),
+  stroke:      z.string().max(20),
+  restSeconds: z.number().int().min(0).max(600).optional(),
+  intensity:   z.enum(["easy", "moderate", "hard", "sprint"]).optional(),
+  equipment:   z.string().max(100).optional().nullable(),
+  note:        z.string().max(500).optional().nullable(),
+})
+
+const SessionSchema = z.object({
+  title:             z.string().min(1).max(200).trim(),
+  subtitle:          z.string().max(300).optional().nullable(),
+  level:             z.enum(["debutant", "intermediaire", "avance"]),
+  stroke:            z.enum(["crawl", "dos", "brasse", "papillon", "4nages"]),
+  goal:              z.enum(["endurance", "technique", "vitesse", "recuperation"]),
+  totalDistance:     z.number().int().min(100).max(20000),
+  estimatedDuration: z.number().int().min(5).max(240),
+  poolLength:        z.union([z.literal(25), z.literal(50)]).optional(),
+  sets:              z.array(SetSchema).min(1).max(50),
+})
 
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id)
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+    return apiError(401, "UNAUTHORIZED", "Non autorisé.")
 
-  const body = await req.json()
-  const { title, subtitle, level, stroke, goal, totalDistance, estimatedDuration, poolLength, sets } = body
+  const body   = await req.json().catch(() => null)
+  const parsed = SessionSchema.safeParse(body)
+  if (!parsed.success) return validationError(parsed.error)
+
+  const { title, subtitle, level, stroke, goal, totalDistance, estimatedDuration, poolLength, sets } = parsed.data
 
   const dbStroke = STROKE_TO_DB[stroke]
-  if (!dbStroke)
-    return NextResponse.json({ error: "Nage invalide." }, { status: 400 })
+  if (!dbStroke) return apiError(400, "INVALID_STROKE", "Nage invalide.")
 
   const saved = await prisma.trainingSession.create({
     data: {
-      userId:            session.user.id,
+      userId: session.user.id,
       title,
       subtitle:          subtitle ?? null,
       level,
@@ -36,7 +64,7 @@ export async function POST(req: NextRequest) {
       poolLength:        poolLength ?? 25,
       source:            "generated",
       sets: {
-        create: sets.map((s: any, i: number) => ({
+        create: sets.map((s, i) => ({
           order:       i,
           phase:       s.phase       as Phase,
           label:       s.label,
@@ -58,7 +86,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id)
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+    return apiError(401, "UNAUTHORIZED", "Non autorisé.")
 
   const sessions = await prisma.trainingSession.findMany({
     where:   { userId: session.user.id },
