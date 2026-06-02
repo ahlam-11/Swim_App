@@ -83,16 +83,40 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ id: saved.id }, { status: 201 })
 }
 
-export async function GET() {
+const PaginationSchema = z.object({
+  page:  z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+})
+
+export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id)
     return apiError(401, "UNAUTHORIZED", "Non autorisé.")
 
-  const sessions = await prisma.trainingSession.findMany({
-    where:   { userId: session.user.id },
-    include: { sets: { orderBy: { order: "asc" } } },
-    orderBy: { createdAt: "desc" },
+  const { searchParams } = new URL(req.url)
+  const parsed = PaginationSchema.safeParse({
+    page:  searchParams.get("page")  ?? 1,
+    limit: searchParams.get("limit") ?? 20,
   })
+  if (!parsed.success) return validationError(parsed.error)
 
-  return NextResponse.json(sessions)
+  const { page, limit } = parsed.data
+  const skip  = (page - 1) * limit
+  const where = { userId: session.user.id }
+
+  const [data, total] = await Promise.all([
+    prisma.trainingSession.findMany({
+      where,
+      include: { sets: { orderBy: { order: "asc" } } },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.trainingSession.count({ where }),
+  ])
+
+  return NextResponse.json({
+    data,
+    meta: { total, page, limit, pages: Math.ceil(total / limit) },
+  })
 }
