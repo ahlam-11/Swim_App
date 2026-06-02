@@ -1,4 +1,5 @@
 import type { ReadySession, TrainingSession, TrainingSet } from "@/app/lib/types"
+import { buildSwimWorkoutFIT } from "./fitService"
 
 type ExportSession = ReadySession | TrainingSession
 
@@ -177,7 +178,7 @@ export function exportToGarmin(session: ExportSession) {
 }
 
 export function exportToCoros(session: ExportSession) {
-  const xml  = buildTCX(session)
-  const blob = new Blob([xml], { type: "application/xml" })
-  triggerDownload(blob, `${slugify(session.title)}-coros.tcx`)
+  const bytes = buildSwimWorkoutFIT(session)
+  const blob  = new Blob([bytes.buffer as ArrayBuffer], { type: "application/octet-stream" })
+  triggerDownload(blob, `${slugify(session.title)}.fit`)
 }
