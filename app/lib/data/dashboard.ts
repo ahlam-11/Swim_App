@@ -1,5 +1,4 @@
 import { prisma } from "@/app/lib/prisma"
-import { Stroke } from "@/app/generated/prisma/client"
 
 // "four_nages" en base → "4nages" dans l'UI
 const STROKE_DISPLAY: Record<string, string> = {
