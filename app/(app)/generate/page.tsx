@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { generateMockSession } from "@/app/lib/services/mockGenerator";
-import type { TrainingSession, Level, Goal, Stroke } from "@/app/lib/types";
+import type { Level, Goal, Stroke } from "@/app/lib/types";
 import ExportModal from "@/app/components/ExportModal";
+import { useGenerateSession, type EquipmentKey } from "@/app/lib/hooks/useGenerateSession";
 
-type EquipmentKey = "planche" | "pullbuoy" | "palmes" | "plaquettes" | "elastique" | "tuba";
-
-const DURATIONS     = ["30min", "45min", "1h00", "1h15", "1h30", "2h00"];
-const DURATION_MINS = [30, 45, 60, 75, 90, 120];
+const DURATIONS = ["30min", "45min", "1h00", "1h15", "1h30", "2h00"];
 
 const LEVEL_LABELS: Record<Level, string> = {
   debutant:      "Débutant",
@@ -88,83 +85,21 @@ function ConfigLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function GeneratePage() {
-  const [level,         setLevel]         = useState<Level>("debutant");
-  const [stroke,        setStroke]        = useState<Stroke>("crawl");
-  const [goal,          setGoal]          = useState<Goal>("endurance");
-  const [durationIdx,   setDurationIdx]   = useState(2);
-  const [equipment,     setEquipment]     = useState<Set<EquipmentKey>>(new Set(["planche", "pullbuoy"]));
-  const [techFocus,      setTechFocus]      = useState<string | null>(null);
-  const [intensity,      setIntensity]      = useState(3);
-  const [includeWarmup,  setIncludeWarmup]  = useState(true);
-  const [includeCooldown,setIncludeCooldown]= useState(true);
-  const [accordionOpen,  setAccordionOpen]  = useState(false);
-  const [loading,        setLoading]        = useState(false);
-  const [session,       setSession]       = useState<TrainingSession | null>(null);
-  const [visible,       setVisible]       = useState(false);
-  const [exportOpen,    setExportOpen]    = useState(false);
-  const [savedId,       setSavedId]       = useState<string | null>(null);
-  const [saving,        setSaving]        = useState(false);
-  const [saveError,     setSaveError]     = useState<string | null>(null);
-  const [customTitle,   setCustomTitle]   = useState("");
-  const [editingTitle,  setEditingTitle]  = useState(false);
+  const {
+    level, setLevel, stroke, setStroke, goal, setGoal,
+    durationIdx, setDurationIdx, equipment, toggleEquipment,
+    techFocus, setTechFocus, intensity, setIntensity,
+    includeWarmup, setIncludeWarmup, includeCooldown, setIncludeCooldown,
+    accordionOpen, setAccordionOpen,
+    loading, session, visible,
+    savedId, saving, saveError, handleSave,
+    customTitle, setCustomTitle, editingTitle, setEditingTitle,
+    exportOpen, setExportOpen,
+    handleGenerate,
+  } = useGenerateSession();
 
   const countUpValue = useCountUp(session?.totalDistance ?? 0, visible);
-
-  function toggleEquipment(k: EquipmentKey) {
-    setEquipment(prev => {
-      const next = new Set(prev);
-      if (next.has(k)) next.delete(k); else next.add(k);
-      return next;
-    });
-  }
-
-  async function handleSave() {
-    if (!session || saving || savedId) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const res  = await fetch("/api/sessions", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ ...session, title: customTitle }),
-      });
-      const data = await res.json();
-      if (res.ok) setSavedId(data.id);
-      else setSaveError(data.error ?? "Erreur lors de la sauvegarde.");
-    } catch {
-      setSaveError("Erreur réseau.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function handleGenerate() {
-    setLoading(true);
-    setSession(null);
-    setVisible(false);
-    setSavedId(null);
-    setSaveError(null);
-    setTimeout(() => {
-      const data = generateMockSession({
-        level,
-        stroke,
-        goal,
-        durationMinutes:  DURATION_MINS[durationIdx],
-        poolLength:        25,
-        techFocus:         techFocus  ?? undefined,
-        intensity,
-        includeWarmup,
-        includeCooldown,
-      });
-      setSession(data);
-      setCustomTitle(data.title);
-      setEditingTitle(false);
-      setLoading(false);
-      setTimeout(() => setVisible(true), 50);
-    }, 1200);
-  }
-
-  const sliderPct = (durationIdx / 5) * 100;
+  const sliderPct    = (durationIdx / 5) * 100;
 
   const badgeStyle = (gray = false): React.CSSProperties => ({
     display: "inline-flex", alignItems: "center",
@@ -432,10 +367,10 @@ export default function GeneratePage() {
                     {!savedId && (
                       <button
                         onClick={() => setEditingTitle(true)}
-                        title="Renommer"
+                        aria-label="Renommer la séance"
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gris-doux)", padding: "8px 0", flexShrink: 0 }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9.5 1.5l2 2-7 7H2.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M9.5 1.5l2 2-7 7H2.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       </button>
                     )}
                   </div>
