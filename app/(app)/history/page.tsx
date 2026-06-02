@@ -13,6 +13,7 @@ type SavedSession = Omit<TrainingSession, "generatedAt"> & {
   generatedAt: string;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeSaved(raw: any): SavedSession {
   const fixStroke = (s: string) => s === "four_nages" ? "4nages" : s;
   return {
@@ -27,6 +28,7 @@ function normalizeSaved(raw: any): SavedSession {
     poolLength:        raw.poolLength as 25 | 50,
     createdAt:         raw.createdAt,
     generatedAt:       raw.createdAt,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sets:              (raw.sets ?? []).map((s: any) => ({
       id:          s.id,
       phase:       s.phase,
@@ -132,9 +134,13 @@ export default function HistoryPage() {
   const [loadingSaved,   setLoadingSaved]   = useState(true);
 
   useEffect(() => {
-    fetch("/api/sessions")
-      .then(r => r.ok ? r.json() : [])
-      .then((data: any[]) => setSavedSessions(data.map(normalizeSaved)))
+    fetch("/api/sessions?limit=100")
+      .then(r => r.ok ? r.json() : { data: [] })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: { data: any[] } | any[]) => {
+        const arr = Array.isArray(res) ? res : (res.data ?? [])
+        setSavedSessions(arr.map(normalizeSaved))
+      })
       .catch(() => {})
       .finally(() => setLoadingSaved(false));
   }, []);
@@ -210,7 +216,7 @@ export default function HistoryPage() {
           ) : savedSessions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "80px 0" }}>
               <p style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", fontSize: 20, color: "var(--gris-doux)", marginBottom: 16 }}>
-                Aucune séance sauvegardée pour l'instant.
+                Aucune séance sauvegardée pour l&apos;instant.
               </p>
               <Link href="/generate" style={{ fontFamily: "var(--font-dm-sans)", fontSize: 14, color: "var(--bleu-piscine)", textDecoration: "underline", textUnderlineOffset: 3 }}>
                 Générer ma première séance →

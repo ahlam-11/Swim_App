@@ -65,7 +65,7 @@ function formatDuration(mins: number): string {
 function useCountUp(target: number, active: boolean) {
   const [value, setValue] = useState(0);
   useEffect(() => {
-    if (!active || target === 0) { setValue(0); return; }
+    if (!active || target === 0) { setValue(0); return; } // eslint-disable-line react-hooks/set-state-in-effect
     const duration = 600;
     const startTime = performance.now();
     function tick(now: number) {
