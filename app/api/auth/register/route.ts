@@ -7,7 +7,7 @@ import { rateLimit, getIP } from "@/app/lib/rate-limit"
 
 const RegisterSchema = z.object({
   email:    z.string().email("Email invalide.").toLowerCase().trim(),
-  password: z.string().min(8, "Mot de passe trop court (8 caractères minimum).").max(128),
+  password: z.string().min(12, "Mot de passe trop court (12 caractères minimum).").max(128),
   name:     z.string().trim().max(100).optional(),
   level:    z.enum(["debutant", "intermediaire", "avance"]).optional(),
 })
