@@ -102,7 +102,7 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(arr.length * 0.5)]
 }
 
-function roundToPool(metres: number, poolLength: 25 | 50): number {
+export function roundToPool(metres: number, poolLength: 25 | 50): number {
   return Math.round(metres / poolLength) * poolLength
 }
 
