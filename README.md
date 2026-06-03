@@ -189,6 +189,16 @@ Copie `.env.example` en `.env` et remplis les valeurs.
 
 *Si absent, le bouton "Connexion Google" ne fonctionnera pas mais l'auth par email reste opérationnelle.
 
+**Secrets GitHub Actions** (à ajouter dans *Settings → Secrets and variables → Actions*) :
+
+| Secret | Rôle | Où le trouver |
+|--------|------|---------------|
+| `VERCEL_TOKEN` | Token d'accès Vercel pour le CD | vercel.com → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | ID de l'équipe/compte Vercel | `vercel env pull` ou `.vercel/project.json` |
+| `VERCEL_PROJECT_ID` | ID du projet Vercel | `.vercel/project.json` après `vercel link` |
+
+Les 4 secrets d'app (`DATABASE_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) doivent aussi être renseignés dans les secrets GitHub pour que le job **Build** de la CI passe.
+
 **Créer les credentials Google OAuth :**
 1. [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials
 2. Créer un ID client OAuth 2.0 (application web)
