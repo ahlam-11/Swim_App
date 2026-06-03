@@ -10,7 +10,7 @@ async function main() {
   console.log("🌊 Seed en cours…\n")
 
   // ─── Compte démo ────────────────────────────────────────────────────────────
-  const hash = await bcrypt.hash("Demo1234!", 12)
+  const hash = await bcrypt.hash("Demo1234!swim", 12)
   const demo = await prisma.user.upsert({
     where:  { email: "demo@demo.local" },
     update: {},
@@ -29,7 +29,7 @@ async function main() {
     console.log(`ℹ  ${existing} séances déjà présentes — seed ignoré pour les séances.`)
     console.log("\n🎉 Seed terminé !")
     console.log("   Email    : demo@demo.local")
-    console.log("   Password : Demo1234!")
+    console.log("   Password : Demo1234!swim")
     return
   }
 
@@ -138,7 +138,7 @@ async function main() {
 
   console.log("\n🎉 Seed terminé !")
   console.log("   Email    : demo@demo.local")
-  console.log("   Password : Demo1234!")
+  console.log("   Password : Demo1234!swim")
 }
 
 main()

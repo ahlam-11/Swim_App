@@ -11,7 +11,7 @@
 **Compte démo** :
 | Email | Mot de passe |
 |-------|-------------|
-| `demo@demo.local` | `Demo1234!` |
+| `demo@demo.local` | `Demo1234!swim` |
 
 ---
 
