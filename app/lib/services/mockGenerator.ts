@@ -1,4 +1,4 @@
-import type { SessionConfig, TrainingSession, TrainingSet, Level, Goal, Stroke } from "../types"
+import type { SessionConfig, TrainingSession, TrainingSet, Level, Goal, Stroke, Intensity } from "../types"
 
 // ─── Générateur de séances — mode démo sans appel API ────────────────────────
 // Même signature que le futur generateSession(config) côté Anthropic.
@@ -83,13 +83,26 @@ const COOLDOWN_NOTES: Record<Stroke, string> = {
   "4nages": "Dos crawlé uniquement — le plus lentement possible",
 }
 
+// ─── Notes de focus technique ─────────────────────────────────────────────────
+
+const TECH_FOCUS_NOTES: Record<string, string> = {
+  Bras:         "Traction haute coude, poussée complète jusqu'à la cuisse",
+  Jambes:       "Battements compacts et réguliers depuis la hanche",
+  Respiration:  "Expire complètement sous l'eau avant de tourner la tête",
+  Virage:       "Approche à vitesse, touche franche, poussée forte sur le mur",
+}
+
+// ─── Multiplicateurs de repos selon l'intensité ───────────────────────────────
+
+const REST_MULTIPLIERS: Record<number, number> = { 1: 1.75, 2: 1.35, 3: 1.0, 4: 0.70, 5: 0.50 }
+
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(arr.length * 0.5)]
 }
 
-function roundToPool(metres: number, poolLength: 25 | 50): number {
+export function roundToPool(metres: number, poolLength: 25 | 50): number {
   return Math.round(metres / poolLength) * poolLength
 }
 
@@ -110,27 +123,47 @@ function makeSet(partial: Omit<TrainingSet, "id">): TrainingSet {
 export function generateMockSession(config: SessionConfig): TrainingSession {
   setCounter = 0
 
-  const { level, stroke, goal, durationMinutes, poolLength = 25 } = config
+  const {
+    level, stroke, goal, durationMinutes, poolLength = 25,
+    techFocus, intensity = 3, includeWarmup = true, includeCooldown = true,
+  } = config
   const cfg = DISTANCES[level]
 
   const totalDistance = roundToPool(durationMinutes * cfg.perMinute, poolLength)
-  const warmupDist    = roundToPool(totalDistance * cfg.warmupRatio, poolLength)
-  const cooldownDist  = roundToPool(totalDistance * cfg.cooldownRatio, poolLength)
+  const warmupDist    = includeWarmup   ? roundToPool(totalDistance * cfg.warmupRatio,   poolLength) : 0
+  const cooldownDist  = includeCooldown ? roundToPool(totalDistance * cfg.cooldownRatio, poolLength) : 0
   const mainDist      = totalDistance - warmupDist - cooldownDist
+
+  const mult = REST_MULTIPLIERS[intensity] ?? 1
+  function adjRest(s: number): number {
+    if (s === 0) return 0
+    return Math.max(10, Math.round(s * mult / 5) * 5)
+  }
+
+  const mainIntensity: Intensity =
+    intensity <= 2 ? "easy" : intensity === 3 ? "moderate" : intensity === 4 ? "hard" : "sprint"
+
+  const focusNote = techFocus ? TECH_FOCUS_NOTES[techFocus] ?? techFocus : null
+
+  function mainNote(base: string): string {
+    return focusNote ? `${base} — Focus : ${focusNote}` : base
+  }
 
   const sets: TrainingSet[] = []
 
   // ── Warmup ──────────────────────────────────────────────────────────────────
-  sets.push(makeSet({
-    phase:       "warmup",
-    label:       "Échauffement",
-    repetitions: 1,
-    distance:    warmupDist,
-    stroke:      stroke === "papillon" ? "crawl" : stroke,
-    restSeconds: 30,
-    intensity:   "easy",
-    note:        WARMUP_NOTES[stroke],
-  }))
+  if (includeWarmup) {
+    sets.push(makeSet({
+      phase:       "warmup",
+      label:       "Échauffement",
+      repetitions: 1,
+      distance:    warmupDist,
+      stroke:      stroke === "papillon" ? "crawl" : stroke,
+      restSeconds: adjRest(30),
+      intensity:   "easy",
+      note:        WARMUP_NOTES[stroke],
+    }))
+  }
 
   // ── Phase principale ─────────────────────────────────────────────────────────
   if (goal === "endurance") {
@@ -143,9 +176,9 @@ export function generateMockSession(config: SessionConfig): TrainingSession {
         repetitions: 1,
         distance:    repDist,
         stroke,
-        restSeconds: level === "debutant" ? 60 : level === "intermediaire" ? 45 : 30,
-        intensity:   "moderate",
-        note:        i === 0 ? DRILL_NOTES[goal] : undefined,
+        restSeconds: adjRest(level === "debutant" ? 60 : level === "intermediaire" ? 45 : 30),
+        intensity:   mainIntensity,
+        note:        i === 0 ? mainNote(DRILL_NOTES[goal]) : undefined,
       }))
     }
   } else if (goal === "vitesse") {
@@ -157,22 +190,22 @@ export function generateMockSession(config: SessionConfig): TrainingSession {
       repetitions: reps,
       distance:    repDist,
       stroke,
-      restSeconds: level === "debutant" ? 90 : level === "intermediaire" ? 60 : 45,
-      intensity:   "sprint",
-      note:        DRILL_NOTES[goal],
+      restSeconds: adjRest(level === "debutant" ? 90 : level === "intermediaire" ? 60 : 45),
+      intensity:   mainIntensity,
+      note:        mainNote(DRILL_NOTES[goal]),
     }))
   } else if (goal === "technique") {
     const drillDist = roundToPool(mainDist * 0.45, poolLength)
     const swimDist  = mainDist - drillDist
     sets.push(makeSet({
       phase:       "drills",
-      label:       "Drills techniques",
+      label:       techFocus ? `Drills — ${techFocus}` : "Drills techniques",
       repetitions: Math.round(drillDist / (poolLength * 2)),
       distance:    poolLength * 2,
       stroke,
-      restSeconds: 30,
+      restSeconds: adjRest(30),
       intensity:   "easy",
-      note:        DRILL_NOTES[goal],
+      note:        mainNote(DRILL_NOTES[goal]),
     }))
     sets.push(makeSet({
       phase:       "main",
@@ -180,8 +213,8 @@ export function generateMockSession(config: SessionConfig): TrainingSession {
       repetitions: Math.round(swimDist / (poolLength * 4)),
       distance:    poolLength * 4,
       stroke,
-      restSeconds: 45,
-      intensity:   "moderate",
+      restSeconds: adjRest(45),
+      intensity:   mainIntensity,
     }))
   } else {
     // récupération
@@ -191,23 +224,25 @@ export function generateMockSession(config: SessionConfig): TrainingSession {
       repetitions: 1,
       distance:    mainDist,
       stroke:      stroke === "papillon" ? "crawl" : stroke,
-      restSeconds: 60,
+      restSeconds: adjRest(60),
       intensity:   "easy",
-      note:        DRILL_NOTES[goal],
+      note:        mainNote(DRILL_NOTES[goal]),
     }))
   }
 
   // ── Cooldown ─────────────────────────────────────────────────────────────────
-  sets.push(makeSet({
-    phase:       "cooldown",
-    label:       "Retour au calme",
-    repetitions: 1,
-    distance:    cooldownDist,
-    stroke:      stroke === "papillon" ? "crawl" : stroke,
-    restSeconds: 0,
-    intensity:   "easy",
-    note:        COOLDOWN_NOTES[stroke],
-  }))
+  if (includeCooldown) {
+    sets.push(makeSet({
+      phase:       "cooldown",
+      label:       "Retour au calme",
+      repetitions: 1,
+      distance:    cooldownDist,
+      stroke:      stroke === "papillon" ? "crawl" : stroke,
+      restSeconds: 0,
+      intensity:   "easy",
+      note:        COOLDOWN_NOTES[stroke],
+    }))
+  }
 
   // ── Métadonnées ───────────────────────────────────────────────────────────────
   const titleOptions = TITLES[goal][stroke]

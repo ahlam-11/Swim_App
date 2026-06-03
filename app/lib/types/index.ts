@@ -39,11 +39,15 @@ export interface ReadySession {
 // ─── Séance générée ──────────────────────────────────────────────────────────
 
 export interface SessionConfig {
-  level:           Level
-  stroke:          Stroke
-  goal:            Goal
-  durationMinutes: number
-  poolLength?:     25 | 50
+  level:            Level
+  stroke:           Stroke
+  goal:             Goal
+  durationMinutes:  number
+  poolLength?:      25 | 50
+  techFocus?:       string
+  intensity?:       number   // 1–5, défaut 3
+  includeWarmup?:   boolean
+  includeCooldown?: boolean
 }
 
 export interface TrainingSession {
