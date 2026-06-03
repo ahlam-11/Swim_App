@@ -1,4 +1,4 @@
-# API Reference — SwimGen
+# API Reference — Swim
 
 Base URL : `/api`  
 Authentification : cookie de session HttpOnly géré par NextAuth v5.  
