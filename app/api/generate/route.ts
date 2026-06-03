@@ -3,7 +3,7 @@ import { z } from "zod"
 import Anthropic from "@anthropic-ai/sdk"
 import { auth } from "@/app/lib/auth"
 import { apiError, validationError } from "@/app/lib/api-error"
-import { rateLimit, getIP } from "@/app/lib/rate-limit"
+import { rateLimit } from "@/app/lib/rate-limit"
 import { generateMockSession } from "@/app/lib/services/mockGenerator"
 import type { TrainingSet } from "@/app/lib/types"
 
