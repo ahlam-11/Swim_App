@@ -99,6 +99,8 @@ graph TD
 
 **TailwindCSS 3** plutôt que CSS Modules ou styled-components : utilitaires inline = pas de context-switch fichier CSS, intégration native avec Next.js. Inconvénient accepté : les classes longues dans le JSX nuisent à la lisibilité — partiellement compensé par des CSS variables pour les tokens de design.
 
+> Modèle de données détaillé (ERD + description des colonnes) : [docs/DB.md](docs/DB.md)
+
 ### Limites connues
 
 - **Pas de rate limiting** : `/api/auth/register` et la route NextAuth `/api/auth/signin` ne sont pas protégées contre le brute force.
@@ -197,14 +199,17 @@ Copie `.env.example` en `.env` et remplis les valeurs.
 
 ## Tests
 
-Suite de tests automatisés : *à venir (cf. Limites connues)*.
-
-Vérifications manuelles disponibles :
 ```bash
-npx tsc --noEmit   # vérification TypeScript
-npm run lint       # ESLint
-npm run build      # build de production complet
+npm test            # 26 tests unitaires Vitest (passe en ~500ms)
+npm run test:watch  # mode watch pour le développement
+npx tsc --noEmit    # vérification TypeScript
+npm run lint        # ESLint
+npm run build       # build de production complet
 ```
+
+Voir aussi la documentation complémentaire :
+- [docs/API.md](docs/API.md) — référence complète des endpoints REST
+- [docs/DB.md](docs/DB.md) — modèle de données (ERD + colonnes)
 
 ---
 
