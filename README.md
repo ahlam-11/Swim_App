@@ -6,7 +6,7 @@
 
 ## Démo en ligne
 
-**URL** : [https://swim-app.vercel.app](https://swim-app.vercel.app) *(mettre à jour avec l'URL Vercel exacte)*
+**URL** : [https://swim-app-five.vercel.app](https://swim-app-five.vercel.app)
 
 **Compte démo** :
 | Email | Mot de passe |
@@ -205,7 +205,7 @@ Les 4 secrets d'app (`DATABASE_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_
 1. [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials
 2. Créer un ID client OAuth 2.0 (application web)
 3. Redirect URI dev : `http://localhost:3000/api/auth/callback/google`
-4. Redirect URI prod : `https://ton-domaine.vercel.app/api/auth/callback/google`
+4. Redirect URI prod : `https://swim-app-five.vercel.app/api/auth/callback/google`
 
 ---
 
