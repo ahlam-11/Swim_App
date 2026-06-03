@@ -54,7 +54,7 @@ const CRC_TABLE = [
   0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400,
 ]
 
-function fitCRC(data: number[], seed = 0): number {
+export function fitCRC(data: number[], seed = 0): number {
   let crc = seed
   for (const b of data) {
     let tmp = CRC_TABLE[crc & 0x0F]

@@ -35,7 +35,7 @@ export interface RecentSession {
 
 // ─── Streak : semaines consécutives avec au moins 1 séance ───────────────────
 
-function computeStreak(dates: Date[]): number {
+export function computeStreak(dates: Date[]): number {
   if (dates.length === 0) return 0
 
   // Numéro de semaine ISO : "2026-W18"
