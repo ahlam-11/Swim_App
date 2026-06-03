@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { generateMockSession } from "@/app/lib/services/mockGenerator"
 import type { Level, Goal, Stroke, TrainingSession } from "@/app/lib/types"
+
+export type GenerationMode = "ai" | "algorithmic"
 
 export type EquipmentKey = "planche" | "pullbuoy" | "palmes" | "plaquettes" | "elastique" | "tuba"
 
@@ -25,6 +26,7 @@ export function useGenerateSession() {
   const [loading,        setLoading]        = useState(false)
   const [session,        setSession]        = useState<TrainingSession | null>(null)
   const [visible,        setVisible]        = useState(false)
+  const [genMode,        setGenMode]        = useState<GenerationMode | null>(null)
 
   // ── Export & save ────────────────────────────────────────────────────────────
   const [exportOpen,     setExportOpen]     = useState(false)
@@ -42,30 +44,45 @@ export function useGenerateSession() {
     })
   }
 
-  function handleGenerate() {
+  async function handleGenerate() {
     setLoading(true)
     setSession(null)
     setVisible(false)
     setSavedId(null)
     setSaveError(null)
-    setTimeout(() => {
-      const data = generateMockSession({
-        level,
-        stroke,
-        goal,
-        durationMinutes:  DURATION_MINS[durationIdx],
-        poolLength:        25,
-        techFocus:         techFocus ?? undefined,
-        intensity,
-        includeWarmup,
-        includeCooldown,
+    setGenMode(null)
+    try {
+      const res  = await fetch("/api/generate", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          level,
+          stroke,
+          goal,
+          durationMinutes:  DURATION_MINS[durationIdx],
+          poolLength:        25,
+          techFocus:         techFocus ?? undefined,
+          intensity,
+          includeWarmup,
+          includeCooldown,
+        }),
       })
-      setSession(data)
-      setCustomTitle(data.title)
+      const data = await res.json()
+      if (!res.ok) {
+        setSaveError(data.error?.message ?? "Erreur lors de la génération.")
+        return
+      }
+      const { mode, ...sessionData } = data
+      setSession(sessionData as TrainingSession)
+      setCustomTitle(sessionData.title)
       setEditingTitle(false)
-      setLoading(false)
+      setGenMode(mode as GenerationMode)
       setTimeout(() => setVisible(true), 50)
-    }, 1200)
+    } catch {
+      setSaveError("Erreur réseau — réessaie.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleSave() {
@@ -101,7 +118,7 @@ export function useGenerateSession() {
     includeCooldown, setIncludeCooldown,
     accordionOpen, setAccordionOpen,
     // result
-    loading, session, visible,
+    loading, session, visible, genMode,
     // save
     savedId, saving, saveError, handleSave,
     customTitle, setCustomTitle,

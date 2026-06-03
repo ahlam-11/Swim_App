@@ -91,7 +91,7 @@ export default function GeneratePage() {
     techFocus, setTechFocus, intensity, setIntensity,
     includeWarmup, setIncludeWarmup, includeCooldown, setIncludeCooldown,
     accordionOpen, setAccordionOpen,
-    loading, session, visible,
+    loading, session, visible, genMode,
     savedId, saving, saveError, handleSave,
     customTitle, setCustomTitle, editingTitle, setEditingTitle,
     exportOpen, setExportOpen,
@@ -382,6 +382,11 @@ export default function GeneratePage() {
                   <span style={badgeStyle()}>{LEVEL_LABELS[session.level]}</span>
                   <span style={badgeStyle()}>{STROKE_LABELS[session.stroke]}</span>
                   <span style={badgeStyle(true)}>{formatDuration(session.estimatedDuration)}</span>
+                  {genMode === "ai" && (
+                    <span style={{ ...badgeStyle(), background: "#EDE9FE", color: "#7C3AED", border: "1px solid #DDD6FE" }}>
+                      ✦ IA
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
                   <button onClick={handleSave} disabled={saving || !!savedId} style={{ ...actionBtnStyle, color: savedId ? "#22C55E" : "var(--gris-doux)" }}>
