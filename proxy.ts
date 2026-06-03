@@ -11,7 +11,7 @@ function buildSecurityHeaders(nonce: string): Record<string, string> {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     // unsafe-inline requis car le projet utilise des style={{}} React (style attrs HTML)
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' blob: data: https://images.unsplash.com",
+    "img-src 'self' blob: data: https://images.unsplash.com https://img.youtube.com",
     "font-src 'self'",            // next/font auto-héberge les Google Fonts
     "object-src 'none'",
     "base-uri 'self'",
