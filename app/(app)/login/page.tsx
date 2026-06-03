@@ -177,7 +177,7 @@ export default function LoginPage() {
       <div className="hidden md:block" style={{ position: "relative", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1560090995-c35da5a6cbfe?w=1200&q=80"
+          src="/swimmer_landing.webp"
           alt=""
           aria-hidden
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
