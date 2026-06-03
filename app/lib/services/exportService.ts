@@ -97,7 +97,7 @@ export async function exportToPDF(session: ExportSession) {
     doc.setPage(i)
     doc.setFontSize(8)
     doc.setTextColor(160, 160, 160)
-    doc.text("SwimGen · swimgen.app", 14, 290)
+    doc.text("Swim", 14, 290)
     doc.text(`Page ${i} / ${pageCount}`, 196, 290, { align: "right" })
   }
 

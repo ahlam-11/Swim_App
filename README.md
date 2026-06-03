@@ -1,6 +1,6 @@
-# SwimGen — Générateur de séances de natation
+# Swim — Générateur de séances de natation
 
-> SwimGen génère des séances de natation personnalisées et les exporte vers ta montre connectée (COROS `.fit`, Garmin `.tcx`) ou en PDF imprimable.
+> Swim génère des séances de natation personnalisées et les exporte vers ta montre connectée (COROS `.fit`, Garmin `.tcx`) ou en PDF imprimable.
 
 ---
 
@@ -25,7 +25,7 @@
 
 ### Pitch
 
-Les nageurs qui s'entraînent seuls ne savent généralement pas comment structurer une séance équilibrée (échauffement, travail technique, principal, retour au calme). SwimGen génère automatiquement des séances adaptées au niveau, à la nage et aux objectifs de l'utilisateur, et les exporte directement vers les montres connectées du marché (COROS, Garmin) ou en PDF imprimable pour le bord du bassin.
+Les nageurs qui s'entraînent seuls ne savent généralement pas comment structurer une séance équilibrée (échauffement, travail technique, principal, retour au calme). Swim génère automatiquement des séances adaptées au niveau, à la nage et aux objectifs de l'utilisateur, et les exporte directement vers les montres connectées du marché (COROS, Garmin) ou en PDF imprimable pour le bord du bassin.
 
 ### Personae cibles
 
