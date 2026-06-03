@@ -48,11 +48,11 @@ Les nageurs qui s'entraînent seuls ne savent généralement pas comment structu
 
 ### Out of scope
 
-- **Génération par IA** : le générateur est algorithmique (règles fixes), pas basé sur un LLM.
+- **Coaching en temps réel** : la génération IA produit la séance à la demande mais ne s'adapte pas en cours de nage.
 - **Planification calendrier** : le modèle `ScheduledSession` existe en base mais l'interface n'est pas connectée.
 - **Partage de séances** : les séances sont privées par utilisateur, pas de partage public.
 - **Application mobile native** : site web responsive uniquement, pas d'app iOS/Android.
-- **Coaching en temps réel** : pas de feedback live pendant la nage, pas de connexion Bluetooth avec la montre.
+- **Connexion Bluetooth** : pas de feedback live pendant la nage, pas de connexion temps réel avec la montre.
 
 ### Parcours utilisateur principal
 
@@ -184,8 +184,10 @@ Copie `.env.example` en `.env` et remplis les valeurs.
 | `AUTH_SECRET` | Clé secrète NextAuth pour signer les JWT — génère avec `openssl rand -base64 32` | `Abc123...` | **Oui** |
 | `GOOGLE_CLIENT_ID` | ID client OAuth Google | `123456.apps.googleusercontent.com` | Non* |
 | `GOOGLE_CLIENT_SECRET` | Secret OAuth Google | `GOCSPX-...` | Non* |
+| `ANTHROPIC_API_KEY` | Clé API Claude pour la génération IA des séances | `sk-ant-...` | Non** |
 
-*Si absent, le bouton "Connexion Google" ne fonctionnera pas mais l'auth par email reste opérationnelle.
+*Si absent, le bouton "Connexion Google" ne fonctionnera pas mais l'auth par email reste opérationnelle.  
+**Si absent, le générateur algorithmique prend le relais automatiquement — l'app reste 100 % fonctionnelle.
 
 **Créer les credentials Google OAuth :**
 1. [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials
