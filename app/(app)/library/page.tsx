@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { LEARN_VIDEOS } from "@/app/lib/data/learnContent";
 import { TARGETED_DRILLS } from "@/app/lib/data/drills";
 import type { VideoStroke } from "@/app/lib/types";
@@ -108,11 +109,12 @@ export default function LibraryPage() {
               {/* Featured video */}
               {featured && (
                 <a href={`https://www.youtube.com/watch?v=${featured.youtubeId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}>
-                  <div style={{ position: "relative", overflow: "hidden", marginBottom: 14 }}>
-                    <img
+                  <div style={{ position: "relative", overflow: "hidden", marginBottom: 14, aspectRatio: "16/9" }}>
+                    <Image
+                      fill
                       src={`https://img.youtube.com/vi/${featured.youtubeId}/hqdefault.jpg`}
                       alt={featured.title}
-                      style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block", transition: "transform 300ms ease" }}
+                      style={{ objectFit: "cover", transition: "transform 300ms ease" }}
                       onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.02)")}
                       onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
                     />
@@ -144,11 +146,12 @@ export default function LibraryPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 {rest.map(video => (
                   <a key={video.id} href={`https://www.youtube.com/watch?v=${video.youtubeId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", cursor: "pointer" }}>
-                    <div style={{ position: "relative", overflow: "hidden", marginBottom: 10, borderRadius: 8 }}>
-                      <img
+                    <div style={{ position: "relative", overflow: "hidden", marginBottom: 10, borderRadius: 8, aspectRatio: "16/9" }}>
+                      <Image
+                        fill
                         src={`https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`}
                         alt={video.title}
-                        style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block", borderRadius: 8, transition: "transform 300ms ease" }}
+                        style={{ objectFit: "cover", borderRadius: 8, transition: "transform 300ms ease" }}
                         onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.02)")}
                         onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
                       />
